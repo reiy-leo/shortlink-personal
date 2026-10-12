@@ -1,7 +1,7 @@
 // 社交预览（OG）：从列表「…」菜单打开，单独保存，只改 og 字段。
 import { useEffect, useState } from "react";
 import { Banner, Button, Dialog, Input, InputArea, Text } from "@cloudflare/kumo";
-import { ShuffleIcon, WarningCircleIcon, XIcon } from "@phosphor-icons/react";
+import { WarningCircleIcon, XIcon } from "@phosphor-icons/react";
 import type { LinkView } from "../../../src/shared/types.ts";
 import { api } from "../api.ts";
 import { hostOf } from "./format.ts";
@@ -18,7 +18,6 @@ export function PreviewDialog(props: {
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
   const [saving, setSaving] = useState(false);
-  const [rolling, setRolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,19 +27,6 @@ export function PreviewDialog(props: {
     setImage(link.og?.image ?? "");
     setError(null);
   }, [open, link]);
-
-  async function roll() {
-    if (!link) return;
-    setRolling(true);
-    setError(null);
-    try {
-      setImage((await api.randomOgImage(link.code)).image);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setRolling(false);
-    }
-  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -79,12 +65,7 @@ export function PreviewDialog(props: {
             <div className="grid content-start gap-4">
               <Input label="标题" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
               <InputArea label="描述" value={description} onValueChange={(v: string) => setDescription(v)} autoResize minRows={2} maxRows={5} maxLength={500} />
-              <div className="flex items-end gap-2">
-                <div className="min-w-0 flex-1">
-                  <Input label="图片地址" type="url" placeholder="https://…/cover.png" value={image} onChange={(e) => setImage(e.target.value)} description="建议 1200×630，或点「随机」从 vector-wallpapers 生成一张" />
-                </div>
-                <Button type="button" variant="secondary" icon={ShuffleIcon} loading={rolling} onClick={roll} className="mb-6">随机</Button>
-              </div>
+              <Input label="图片地址" type="url" placeholder="https://…/cover.png" value={image} onChange={(e) => setImage(e.target.value)} description="建议 1200×630" />
             </div>
             <div className="grid content-start gap-2">
               <Text variant="secondary" size="sm">预览</Text>

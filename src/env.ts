@@ -5,8 +5,6 @@ export interface Env {
   ASSETS?: Fetcher;
   /** Workers Analytics Engine：每次跳转写一个数据点。 */
   ANALYTICS?: AnalyticsEngineDataset;
-  /** Service Binding → vector-wallpapers 的 OgImage 入口：随机壁纸做社交预览图。 */
-  WALLPAPERS?: import("./ogimage.ts").WallpaperService;
 
   // secrets
   SESSION_SECRET?: string;
