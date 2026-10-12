@@ -57,7 +57,7 @@ function toInput(f: FormState, editing: LinkView | null): LinkInput {
   const input: LinkInput = {
     url: f.url.trim(),
     note: f.note.trim() || null,
-    expiresAt: f.expiresAt ? new Date(f.expiresAt).toISOString() : null,
+    expiresAt: f.expiresAt || null,
     unsafe: f.unsafe,
     devices: f.devices,
     countries: Object.fromEntries(f.countries.filter((r) => r.code.trim() || r.url.trim()).map((r) => [r.code.trim(), r.url.trim()])),

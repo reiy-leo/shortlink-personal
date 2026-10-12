@@ -1,24 +1,35 @@
-// 过期时间选择：Kumo Popover + DatePicker + Select（时、分）。
-// value / onChange 使用本地时间字符串 "YYYY-MM-DDTHH:mm"（空字符串 = 永久有效）。
+// 过期时间选择：Kumo Popover + DatePicker + Select（时、分、时区）。
+// value / onChange："YYYY-MM-DDTHH:mm+08:00"（墙上时间 + 时区偏移；空字符串 = 永久有效）。
 import { useState } from "react";
 import { Button, DatePicker, Label, Popover, Select, Text } from "@cloudflare/kumo";
 import { CalendarBlankIcon } from "@phosphor-icons/react";
 import { zhCN } from "react-day-picker/locale";
+import { countdown, fmtOffset, isoOffset, localOffset } from "./format.ts";
+import { useNow } from "../useNow.ts";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const HOURS = Array.from({ length: 24 }, (_, i) => pad(i));
 const MINUTES = Array.from({ length: 12 }, (_, i) => pad(i * 5));
+// UTC-12 … UTC+14 整点，加上常见的半点 / 45 分时区
+const OFFSETS = [
+  ...Array.from({ length: 27 }, (_, i) => (i - 12) * 60),
+  -570, -210, 210, 270, 330, 345, 390, 525, 570, 630, 765,
+].sort((a, b) => a - b);
+const OFFSET_NAMES: Record<number, string> = {
+  480: "北京、新加坡、台北", 540: "东京、首尔", 0: "UTC、伦敦（冬令时）", 60: "柏林、巴黎（冬令时）",
+  "-300": "纽约（冬令时）", "-240": "纽约（夏令时）", "-480": "洛杉矶（冬令时）", "-420": "洛杉矶（夏令时）", 330: "印度",
+} as Record<number, string>;
 
-function parse(v: string): { date?: Date; hh: string; mm: string } {
-  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-  if (!m) return { hh: "23", mm: "55" };
-  return { date: new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])), hh: m[4]!, mm: m[5]! };
+interface Parsed { date?: Date; hh: string; mm: string; off: number }
+
+function parse(v: string): Parsed {
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?:([+-])(\d{2}):?(\d{2}))?/);
+  if (!m) return { hh: "23", mm: "55", off: localOffset() };
+  const off = m[6] ? (m[6] === "-" ? -1 : 1) * (Number(m[7]) * 60 + Number(m[8])) : localOffset();
+  return { date: new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])), hh: m[4]!, mm: m[5]!, off };
 }
-const format = (d: Date, hh: string, mm: string) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${hh}:${mm}`;
-const display = (v: string) => {
-  const { date, hh, mm } = parse(v);
-  return date ? `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${hh}:${mm}` : "永久有效";
-};
+const format = (d: Date, hh: string, mm: string, off: number) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${hh}:${mm}${isoOffset(off)}`;
 
 interface Props {
   value: string;
@@ -28,11 +39,19 @@ interface Props {
 
 export function ExpiryPicker({ value, onChange, description }: Props) {
   const [open, setOpen] = useState(false);
-  const { date, hh, mm } = parse(value);
+  const now = useNow();
+  const p = parse(value);
+  const { date, hh, mm, off } = p;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  // 分钟下拉以 5 分钟为步长；已有的非整 5 分钟值也要能显示
   const minutes = MINUTES.includes(mm) ? MINUTES : [...MINUTES, mm].sort();
+  const offsets = OFFSETS.includes(off) ? OFFSETS : [...OFFSETS, off].sort((a, b) => a - b);
+  const update = (patch: Partial<Parsed>) => {
+    const n = { ...p, ...patch };
+    if (n.date) onChange(format(n.date, n.hh, n.mm, n.off));
+  };
+  const left = value ? countdown(value, now) : null;
+  const label = date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${hh}:${mm} ${fmtOffset(off)}` : "永久有效";
 
   return (
     <div className="grid content-start gap-1.5">
@@ -41,7 +60,7 @@ export function ExpiryPicker({ value, onChange, description }: Props) {
         <Popover.Trigger
           render={
             <Button variant="secondary" icon={CalendarBlankIcon} className="justify-start">
-              {display(value)}
+              {label}
             </Button>
           }
         />
@@ -51,25 +70,43 @@ export function ExpiryPicker({ value, onChange, description }: Props) {
             locale={zhCN}
             weekStartsOn={1}
             selected={date}
-            onChange={(d?: Date) => d && onChange(format(d, hh, mm))}
+            onChange={(d?: Date) => d && update({ date: d })}
             disabled={{ before: today }}
             defaultMonth={date ?? today}
           />
           <div className="flex items-end gap-2">
-            <Select label="时" value={hh} onValueChange={(v) => date && onChange(format(date, String(v), mm))} disabled={!date} className="w-20">
+            <Select label="时" value={hh} onValueChange={(v) => update({ hh: String(v) })} disabled={!date} className="w-20">
               {HOURS.map((h) => <Select.Option key={h} value={h}>{h}</Select.Option>)}
             </Select>
-            <Select label="分" value={mm} onValueChange={(v) => date && onChange(format(date, hh, String(v)))} disabled={!date} className="w-20">
+            <Select label="分" value={mm} onValueChange={(v) => update({ mm: String(v) })} disabled={!date} className="w-20">
               {minutes.map((m) => <Select.Option key={m} value={m}>{m}</Select.Option>)}
             </Select>
+            <Select
+              label="时区"
+              value={off}
+              onValueChange={(v) => update({ off: Number(v) })}
+              disabled={!date}
+              renderValue={(v) => fmtOffset(Number(v))}
+              className="w-28"
+            >
+              {offsets.map((o) => (
+                <Select.Option key={o} value={o}>
+                  {OFFSET_NAMES[o] ? `${fmtOffset(o)} ${OFFSET_NAMES[o]}` : fmtOffset(o)}
+                </Select.Option>
+              ))}
+            </Select>
           </div>
+          {value && <Text variant="secondary" size="sm">{left ? `还剩 ${left}` : "这个时间已经过去了"}</Text>}
           <div className="flex justify-between gap-2">
             <Button variant="ghost" size="sm" onClick={() => { onChange(""); setOpen(false); }}>永久有效</Button>
             <Button variant="primary" size="sm" onClick={() => setOpen(false)}>完成</Button>
           </div>
         </Popover.Content>
       </Popover>
-      {description && <Text variant="secondary" size="sm">{description}</Text>}
+      <Text variant="secondary" size="sm">
+        {value ? (left ? `还剩 ${left}。` : "这个时间已经过去，保存后链接立即失效。") : ""}
+        {description}
+      </Text>
     </div>
   );
 }

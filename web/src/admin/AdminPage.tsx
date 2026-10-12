@@ -36,7 +36,8 @@ import {
 } from "@phosphor-icons/react";
 import type { LinkView } from "../../../src/shared/types.ts";
 import { api } from "../api.ts";
-import { fmtTime, isExpired } from "./format.ts";
+import { countdown, fmtTime } from "./format.ts";
+import { useNow } from "../useNow.ts";
 import { LinkDialog } from "./LinkDialog.tsx";
 // 图表库（ECharts）只在需要看统计时加载
 const StatsDialog = lazy(() => import("./StatsDialog.tsx").then((m) => ({ default: m.StatsDialog })));
@@ -48,14 +49,19 @@ interface Props {
 }
 
 function LinkBadges({ l }: { l: LinkView }) {
+  const now = useNow();
+  const left = l.expiresAt ? countdown(l.expiresAt, now) : null;
   const routes = Object.keys(l.devices ?? {}).length + Object.keys(l.countries ?? {}).length;
   return (
     <div className="flex flex-wrap gap-1">
       {l.expiresAt &&
-        (isExpired(l.expiresAt) ? (
+        (!left ? (
           <Badge variant="red">已过期</Badge>
         ) : (
-          <Badge variant="neutral">{fmtTime(l.expiresAt)} 过期</Badge>
+          <>
+            <Badge variant="neutral">{fmtTime(l.expiresAt)} 过期</Badge>
+            {left && <Badge variant="blue">还剩 {left}</Badge>}
+          </>
         ))}
       {l.hasPassword && <Badge variant="neutral" icon={<LockKeyIcon />}>密码</Badge>}
       {l.unsafe && <Badge variant="orange" icon={<ShieldWarningIcon />}>安全提示</Badge>}

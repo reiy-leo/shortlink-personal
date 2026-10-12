@@ -93,6 +93,9 @@ function cleanExpiry(v: string | null | undefined): string | undefined {
   if (!v) return undefined;
   const t = Date.parse(v);
   if (Number.isNaN(t)) throw new InputError("过期时间格式不对");
+  // 带时区偏移的输入（如 2026-10-13T12:48+08:00）原样保留偏移，后台按设置时的时区显示
+  const m = v.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?([+-])(\d{2}):?(\d{2})$/);
+  if (m) return `${m[1]}:00${m[2]}${m[3]}:${m[4]}`;
   return new Date(t).toISOString();
 }
 
