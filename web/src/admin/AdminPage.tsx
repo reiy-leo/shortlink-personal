@@ -166,7 +166,10 @@ export function AdminPage({ user, origin, stats }: Props) {
               }
             />
             <DropdownMenu.Content align="end">
-              <DropdownMenu.Label>{user.email}</DropdownMenu.Label>
+              {/* Label 是 Base UI 的 GroupLabel，必须放在 Group 里，否则抛错白屏 */}
+              <DropdownMenu.Group>
+                <DropdownMenu.Label>{user.email}</DropdownMenu.Label>
+              </DropdownMenu.Group>
               <DropdownMenu.Separator />
               <DropdownMenu.Item icon={SignOutIcon} onClick={() => (document.getElementById("logout-form") as HTMLFormElement | null)?.submit()}>
                 退出登录

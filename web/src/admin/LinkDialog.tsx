@@ -1,13 +1,18 @@
 // 新建 / 编辑短链：一个 Dialog，四个分区用 Tabs 切换。
 import { useEffect, useState } from "react";
-import { Banner, Button, Dialog, Grid, Input, InputArea, SensitiveInput, Switch, Tabs, Text } from "@cloudflare/kumo";
+import { Banner, Button, Dialog, Grid, Input, InputArea, Select, SensitiveInput, Switch, Tabs, Text } from "@cloudflare/kumo";
 import { PlusIcon, TrashIcon, WarningCircleIcon, XIcon } from "@phosphor-icons/react";
 import type { DeviceRules, LinkInput, LinkView } from "../../../src/shared/types.ts";
 import { api } from "../api.ts";
 import { hostOf, toLocalInput } from "./format.ts";
+import { ExpiryPicker } from "./ExpiryPicker.tsx";
 
 type Tab = "basic" | "control" | "routing" | "preview";
 interface CountryRow { id: number; code: string; url: string }
+type DeviceKey = keyof DeviceRules;
+const DEVICE_KEYS: DeviceKey[] = ["ios", "android", "mobile", "desktop"];
+const DEVICE_LABELS: Record<DeviceKey, string> = { ios: "iOS", android: "Android", mobile: "其它手机", desktop: "桌面电脑" };
+const DEVICE_PLACEHOLDERS: Record<DeviceKey, string> = { ios: "https://apps.apple.com/…", android: "https://play.google.com/…", mobile: "https://m.example.com", desktop: "https://example.com" };
 
 interface FormState {
   url: string;
@@ -18,6 +23,8 @@ interface FormState {
   clearPassword: boolean;
   unsafe: boolean;
   devices: Required<DeviceRules>;
+  /** 已显示的设备规则行（按添加顺序） */
+  deviceRows: DeviceKey[];
   countries: CountryRow[];
   ogTitle: string;
   ogDescription: string;
@@ -27,7 +34,7 @@ interface FormState {
 let rowId = 0;
 const empty = (): FormState => ({
   url: "", code: "", note: "", expiresAt: "", password: "", clearPassword: false, unsafe: false,
-  devices: { ios: "", android: "", mobile: "", desktop: "" }, countries: [], ogTitle: "", ogDescription: "", ogImage: "",
+  devices: { ios: "", android: "", mobile: "", desktop: "" }, deviceRows: [], countries: [], ogTitle: "", ogDescription: "", ogImage: "",
 });
 
 const fromLink = (l: LinkView): FormState => ({
@@ -39,6 +46,7 @@ const fromLink = (l: LinkView): FormState => ({
   clearPassword: false,
   unsafe: Boolean(l.unsafe),
   devices: { ios: l.devices?.ios ?? "", android: l.devices?.android ?? "", mobile: l.devices?.mobile ?? "", desktop: l.devices?.desktop ?? "" },
+  deviceRows: DEVICE_KEYS.filter((k) => Boolean(l.devices?.[k])),
   countries: Object.entries(l.countries ?? {}).map(([code, url]) => ({ id: ++rowId, code, url })),
   ogTitle: l.og?.title ?? "",
   ogDescription: l.og?.description ?? "",
@@ -84,6 +92,20 @@ export function LinkDialog(props: {
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setF((s) => ({ ...s, [k]: v }));
   const setDevice = (k: keyof DeviceRules, v: string) => setF((s) => ({ ...s, devices: { ...s.devices, [k]: v } }));
+  const addDevice = () =>
+    setF((s) => {
+      const next = DEVICE_KEYS.find((k) => !s.deviceRows.includes(k));
+      return next ? { ...s, deviceRows: [...s.deviceRows, next] } : s;
+    });
+  const removeDevice = (k: DeviceKey) =>
+    setF((s) => ({ ...s, deviceRows: s.deviceRows.filter((x) => x !== k), devices: { ...s.devices, [k]: "" } }));
+  // 切换某行的设备类型：链接跟着移过去，原类型清空
+  const changeDevice = (from: DeviceKey, to: DeviceKey) =>
+    setF((s) => ({
+      ...s,
+      deviceRows: s.deviceRows.map((x) => (x === from ? to : x)),
+      devices: { ...s.devices, [from]: "", [to]: s.devices[from] },
+    }));
   const setCountry = (id: number, patch: Partial<CountryRow>) =>
     setF((s) => ({ ...s, countries: s.countries.map((r) => (r.id === id ? { ...r, ...patch } : r)) }));
 
@@ -165,12 +187,10 @@ export function LinkDialog(props: {
             {tab === "control" && (
               <div className="grid gap-5">
                 <Grid variant="2up" gap="base">
-                  <Input
-                    label="过期时间"
-                    type="datetime-local"
+                  <ExpiryPicker
                     value={f.expiresAt}
-                    onChange={(e) => set("expiresAt", e.target.value)}
-                    description="留空表示永久有效，过期后访问返回「链接已过期」"
+                    onChange={(v) => set("expiresAt", v)}
+                    description="过期后访问返回「链接已过期」"
                   />
                   <SensitiveInput
                     label="访问密码"
@@ -199,12 +219,32 @@ export function LinkDialog(props: {
                     <Text variant="heading" as="h3">按设备</Text>
                     <Text variant="secondary">优先级最高。没填的设备走国家规则或默认长链接。</Text>
                   </div>
-                  <Grid variant="2up" gap="base">
-                    <Input label="iOS" type="url" placeholder="https://apps.apple.com/…" value={f.devices.ios} onChange={(e) => setDevice("ios", e.target.value)} />
-                    <Input label="Android" type="url" placeholder="https://play.google.com/…" value={f.devices.android} onChange={(e) => setDevice("android", e.target.value)} />
-                    <Input label="其它手机" type="url" value={f.devices.mobile} onChange={(e) => setDevice("mobile", e.target.value)} />
-                    <Input label="桌面电脑" type="url" value={f.devices.desktop} onChange={(e) => setDevice("desktop", e.target.value)} />
-                  </Grid>
+                  {f.deviceRows.map((k) => (
+                    <div key={k} className="flex items-start gap-2">
+                      <div className="w-32 shrink-0">
+                        <Select
+                          aria-label="设备类型"
+                          className="w-full"
+                          value={k}
+                          onValueChange={(v) => changeDevice(k, v as DeviceKey)}
+                          renderValue={(v) => DEVICE_LABELS[v as DeviceKey]}
+                        >
+                          {DEVICE_KEYS.filter((d) => d === k || !f.deviceRows.includes(d)).map((d) => (
+                            <Select.Option key={d} value={d}>{DEVICE_LABELS[d]}</Select.Option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <Input className="w-full" aria-label={`${DEVICE_LABELS[k]} 目标链接`} type="url" placeholder={DEVICE_PLACEHOLDERS[k]} value={f.devices[k]} onChange={(e) => setDevice(k, e.target.value)} />
+                      </div>
+                      <Button type="button" variant="ghost" shape="square" icon={TrashIcon} aria-label="删除这条规则" onClick={() => removeDevice(k)} />
+                    </div>
+                  ))}
+                  <div>
+                    <Button type="button" variant="secondary" icon={PlusIcon} onClick={addDevice} disabled={f.deviceRows.length >= DEVICE_KEYS.length}>
+                      添加设备规则
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid gap-3">
                   <div className="grid gap-1">
