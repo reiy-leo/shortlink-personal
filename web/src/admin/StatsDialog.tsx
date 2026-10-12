@@ -78,7 +78,7 @@ export function StatsDialog({ code, open, onOpenChange }: { code: string | null;
           <div className="flex items-start justify-between gap-4">
             <div className="grid gap-1">
               <Dialog.Title className="text-lg font-semibold">/{code} 访问统计</Dialog.Title>
-              <Dialog.Description className="text-kumo-subtle">爬虫不计入，日期按 UTC，数据保留约 90 天。</Dialog.Description>
+              <Dialog.Description className="text-base text-kumo-subtle">爬虫不计入，日期按 UTC，数据保留约 90 天。</Dialog.Description>
             </div>
             <Dialog.Close aria-label="关闭" render={(p) => <Button {...p} variant="ghost" shape="square" icon={<XIcon />} aria-label="关闭" />} />
           </div>

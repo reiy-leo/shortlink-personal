@@ -184,11 +184,11 @@ export function AdminPage({ user, origin, stats }: Props) {
             <Text variant="secondary">{links ? `共 ${links.length} 条` : "加载中…"}</Text>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-64">
+            <div className="relative w-full sm:w-64">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-kumo-subtle">
                 <MagnifyingGlassIcon size={14} />
               </span>
-              <Input aria-label="搜索" placeholder="搜索短码、链接或备注" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-8" />
+              <Input aria-label="搜索" placeholder="搜索短码、链接或备注" value={query} onChange={(e) => setQuery(e.target.value)} className="w-full pl-8" />
             </div>
             <Button variant="primary" icon={PlusIcon} onClick={openCreate}>
               新建短链
@@ -309,7 +309,7 @@ export function AdminPage({ user, origin, stats }: Props) {
           <div className="grid gap-4">
             <div className="grid gap-1.5">
               <Dialog.Title className="text-lg font-semibold">删除 /{deleting?.code}？</Dialog.Title>
-              <Dialog.Description className="text-kumo-subtle">删除后这个短链会立即失效，无法恢复。</Dialog.Description>
+              <Dialog.Description className="text-base text-kumo-subtle">删除后这个短链会立即失效，无法恢复。</Dialog.Description>
             </div>
             <div className="flex justify-end gap-2">
               <Dialog.Close render={(p) => <Button {...p} variant="secondary">取消</Button>} />

@@ -123,7 +123,7 @@ export function LinkDialog(props: {
           <div className="flex items-start justify-between gap-4">
             <div className="grid gap-1">
               <Dialog.Title className="text-lg font-semibold">{editing ? `编辑 /${editing.code}` : "新建短链"}</Dialog.Title>
-              <Dialog.Description className="text-kumo-subtle">
+              <Dialog.Description className="text-base text-kumo-subtle">
                 {editing ? "短码创建后不能修改，其它设置随时可改。" : "只填长链接也行，其余都有默认值。"}
               </Dialog.Description>
             </div>
@@ -157,7 +157,7 @@ export function LinkDialog(props: {
                     pattern="[A-Za-z0-9_\-]{1,64}"
                     description={f.code ? `${origin}/${f.code}` : "字母、数字、- 和 _，区分大小写"}
                   />
-                  <Input label="备注" placeholder="可选，只有你看得到" value={f.note} onChange={(e) => set("note", e.target.value)} maxLength={200} />
+                  <Input label="备注" description="可选，只有你看得到" value={f.note} onChange={(e) => set("note", e.target.value)} maxLength={200} />
                 </Grid>
               </div>
             )}
@@ -214,10 +214,10 @@ export function LinkDialog(props: {
                   {f.countries.map((r) => (
                     <div key={r.id} className="flex items-start gap-2">
                       <div className="w-24 shrink-0">
-                        <Input aria-label="国家代码" placeholder="CN" maxLength={2} value={r.code} onChange={(e) => setCountry(r.id, { code: e.target.value.toUpperCase() })} />
+                        <Input className="w-full" aria-label="国家代码" placeholder="CN" maxLength={2} value={r.code} onChange={(e) => setCountry(r.id, { code: e.target.value.toUpperCase() })} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <Input aria-label="目标链接" type="url" placeholder="https://example.cn" value={r.url} onChange={(e) => setCountry(r.id, { url: e.target.value })} />
+                        <Input className="w-full" aria-label="目标链接" type="url" placeholder="https://example.cn" value={r.url} onChange={(e) => setCountry(r.id, { url: e.target.value })} />
                       </div>
                       <Button
                         type="button"

@@ -67,7 +67,7 @@ export function PasswordPage({ code, wrong }: { code: string; wrong: boolean }) 
               variant={wrong ? "error" : "default"}
               error={wrong ? "密码不对，再试一次" : undefined}
             />
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" className="w-full justify-center">
               继续访问
             </Button>
           </form>
