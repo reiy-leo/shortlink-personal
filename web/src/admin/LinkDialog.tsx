@@ -111,9 +111,9 @@ export function LinkDialog(props: {
   const routingCount = Object.values(f.devices).filter(Boolean).length + f.countries.length;
   const tabs = [
     { value: "basic", label: "基本信息" },
-    { value: "control", label: f.password || f.expiresAt || f.unsafe || (editing?.hasPassword && !f.clearPassword) ? "链接控制 ·" : "链接控制" },
+    { value: "control", label: f.password || f.expiresAt || f.unsafe || (editing?.hasPassword && !f.clearPassword) ? "链接控制 · 已启用" : "链接控制" },
     { value: "routing", label: routingCount ? `智能跳转 · ${routingCount}` : "智能跳转" },
-    { value: "preview", label: f.ogTitle || f.ogDescription || f.ogImage ? "社交预览 ·" : "社交预览" },
+    { value: "preview", label: f.ogTitle || f.ogDescription || f.ogImage ? "社交预览 · 已设置" : "社交预览" },
   ];
 
   return (
