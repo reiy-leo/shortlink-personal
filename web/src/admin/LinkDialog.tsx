@@ -1,13 +1,13 @@
-// 新建 / 编辑短链：一个 Dialog，四个分区用 Tabs 切换。
+// 新建 / 编辑短链：一个 Dialog，三个分区用 Tabs 切换（社交预览在列表的「…」菜单里单独编辑）。
 import { useEffect, useState } from "react";
-import { Banner, Button, Dialog, Grid, Input, InputArea, Select, SensitiveInput, Switch, Tabs, Text } from "@cloudflare/kumo";
+import { Banner, Button, Dialog, Grid, Input, Select, SensitiveInput, Switch, Tabs, Text } from "@cloudflare/kumo";
 import { PlusIcon, TrashIcon, WarningCircleIcon, XIcon } from "@phosphor-icons/react";
 import type { DeviceRules, LinkInput, LinkView } from "../../../src/shared/types.ts";
 import { api } from "../api.ts";
-import { hostOf, toLocalInput } from "./format.ts";
+import { toLocalInput } from "./format.ts";
 import { ExpiryPicker } from "./ExpiryPicker.tsx";
 
-type Tab = "basic" | "control" | "routing" | "preview";
+type Tab = "basic" | "control" | "routing";
 interface CountryRow { id: number; code: string; url: string }
 type DeviceKey = keyof DeviceRules;
 const DEVICE_KEYS: DeviceKey[] = ["iphone", "ipad", "ios", "android", "harmonyos", "mobile", "macos", "windows", "desktop"];
@@ -32,15 +32,12 @@ interface FormState {
   /** 已显示的设备规则行（按添加顺序） */
   deviceRows: DeviceKey[];
   countries: CountryRow[];
-  ogTitle: string;
-  ogDescription: string;
-  ogImage: string;
 }
 
 let rowId = 0;
 const empty = (): FormState => ({
   url: "", code: "", note: "", expiresAt: "", password: "", clearPassword: false, unsafe: false,
-  devices: Object.fromEntries(DEVICE_KEYS.map((k) => [k, ""])) as Record<DeviceKey, string>, deviceRows: [], countries: [], ogTitle: "", ogDescription: "", ogImage: "",
+  devices: Object.fromEntries(DEVICE_KEYS.map((k) => [k, ""])) as Record<DeviceKey, string>, deviceRows: [], countries: [],
 });
 
 const fromLink = (l: LinkView): FormState => ({
@@ -54,9 +51,6 @@ const fromLink = (l: LinkView): FormState => ({
   devices: Object.fromEntries(DEVICE_KEYS.map((k) => [k, l.devices?.[k] ?? ""])) as Record<DeviceKey, string>,
   deviceRows: DEVICE_KEYS.filter((k) => Boolean(l.devices?.[k])),
   countries: Object.entries(l.countries ?? {}).map(([code, url]) => ({ id: ++rowId, code, url })),
-  ogTitle: l.og?.title ?? "",
-  ogDescription: l.og?.description ?? "",
-  ogImage: l.og?.image ?? "",
 });
 
 function toInput(f: FormState, editing: LinkView | null): LinkInput {
@@ -67,7 +61,6 @@ function toInput(f: FormState, editing: LinkView | null): LinkInput {
     unsafe: f.unsafe,
     devices: f.devices,
     countries: Object.fromEntries(f.countries.filter((r) => r.code.trim() || r.url.trim()).map((r) => [r.code.trim(), r.url.trim()])),
-    og: { title: f.ogTitle, description: f.ogDescription, image: f.ogImage },
   };
   if (f.password) input.password = f.password;
   else if (!editing || f.clearPassword) input.password = null;
@@ -141,7 +134,6 @@ export function LinkDialog(props: {
     { value: "basic", label: "基本信息" },
     { value: "control", label: f.password || f.expiresAt || f.unsafe || (editing?.hasPassword && !f.clearPassword) ? "链接控制 · 已启用" : "链接控制" },
     { value: "routing", label: routingCount ? `智能跳转 · ${routingCount}` : "智能跳转" },
-    { value: "preview", label: f.ogTitle || f.ogDescription || f.ogImage ? "社交预览 · 已设置" : "社交预览" },
   ];
 
   return (
@@ -281,30 +273,6 @@ export function LinkDialog(props: {
                       添加国家规则
                     </Button>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {tab === "preview" && (
-              <div className="grid gap-5 md:grid-cols-[1fr_280px]">
-                <div className="grid content-start gap-4">
-                  <Input label="标题" value={f.ogTitle} onChange={(e) => set("ogTitle", e.target.value)} maxLength={200} />
-                  <InputArea label="描述" value={f.ogDescription} onValueChange={(v: string) => set("ogDescription", v)} autoResize minRows={2} maxRows={5} maxLength={500} />
-                  <Input label="图片地址" type="url" placeholder="https://…/cover.png" value={f.ogImage} onChange={(e) => set("ogImage", e.target.value)} description="建议 1200×630" />
-                </div>
-                <div className="grid content-start gap-2">
-                  <Text variant="secondary" size="sm">预览</Text>
-                  <div className="overflow-hidden rounded-lg bg-kumo-base ring ring-kumo-hairline">
-                    <div className="aspect-[1200/630] bg-kumo-recessed">
-                      {f.ogImage && <img src={f.ogImage} alt="" className="h-full w-full object-cover" />}
-                    </div>
-                    <div className="grid gap-1 px-3 py-2.5">
-                      <Text variant="secondary" size="xs">{hostOf(origin)}</Text>
-                      <Text bold truncate>{f.ogTitle || "（未设置标题）"}</Text>
-                      {f.ogDescription && <Text variant="secondary" size="sm">{f.ogDescription}</Text>}
-                    </div>
-                  </div>
-                  <Text variant="secondary" size="xs">微信、Telegram、X、Slack 等抓取链接时显示。</Text>
                 </div>
               </div>
             )}
