@@ -18,6 +18,7 @@ const enc = encodeURIComponent;
 export const api = {
   list: () => request<ListResponse>("/api/links"),
   create: (input: LinkInput) => request<{ link: LinkView }>("/api/links", { method: "POST", body: JSON.stringify(input) }),
+  randomOgImage: (code: string) => request<{ image: string; pattern: string }>(`/api/links/${enc(code)}/og-image`, { method: "POST" }),
   update: (code: string, input: LinkInput) => request<{ link: LinkView }>(`/api/links/${enc(code)}`, { method: "PUT", body: JSON.stringify(input) }),
   remove: (code: string) => request<{ ok: true }>(`/api/links/${enc(code)}`, { method: "DELETE" }),
   stats: (code: string, days: number) => request<LinkStats>(`/api/links/${enc(code)}/stats?days=${days}`),

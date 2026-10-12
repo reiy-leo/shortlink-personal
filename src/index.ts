@@ -9,6 +9,8 @@
 //   PUT  /api/links/:code               编辑
 //   DELETE /api/links/:code             删除
 //   GET  /api/links/:code/stats?days=7  访问统计明细
+//   POST /api/links/:code/og-image      随机一张 vector-wallpapers 壁纸做预览图
+//   GET  /og/:code.png                  预览图（公开，给爬虫）
 import { clickTotals, linkStats, recordClick } from "./analytics.ts";
 import { callback, getAdmin, login, logout } from "./auth.ts";
 import { statsQueryable, statsRecording, type Env } from "./env.ts";
@@ -17,6 +19,7 @@ import { previewPage, renderPage } from "./html.ts";
 import type { LoginError } from "./shared/types.ts";
 import { checkPassword } from "./password.ts";
 import { pickTarget, visitorOf } from "./visitor.ts";
+import { deleteOgImage, randomOgImage, serveOgImage } from "./ogimage.ts";
 
 const LOGIN_ERRORS = new Set(["unconfigured", "denied", "state", "token", "id_token", "unverified", "forbidden"]);
 
@@ -53,11 +56,21 @@ async function handleApi(req: Request, env: Env, path: string): Promise<Response
       const days = Number(new URL(req.url).searchParams.get("days") ?? 7);
       return json(await linkStats(env, decodeURIComponent(stats[1]!), days));
     }
+    const og = path.match(/^\/api\/links\/([^/]+)\/og-image$/);
+    if (og && req.method === "POST") {
+      const code = decodeURIComponent(og[1]!);
+      if (!(await getLink(env, code))) return json({ error: "短码不存在" }, 404);
+      return json(await randomOgImage(env, new URL(req.url).origin, code));
+    }
     const one = path.match(/^\/api\/links\/([^/]+)$/);
     if (one) {
       const code = decodeURIComponent(one[1]!);
       if (req.method === "PUT") return json({ link: await updateLink(env, code, await readInput(req)) });
-      if (req.method === "DELETE") return (await deleteLink(env, code)) ? json({ ok: true }) : json({ error: "短码不存在" }, 404);
+      if (req.method === "DELETE") {
+        if (!(await deleteLink(env, code))) return json({ error: "短码不存在" }, 404);
+        await deleteOgImage(env, code);
+        return json({ ok: true });
+      }
       return json({ error: "不支持的方法" }, 405);
     }
     return json({ error: "未找到" }, 404);
@@ -118,6 +131,12 @@ export default {
       }
       const err = url.searchParams.get("login_error");
       return renderPage(env, req, { kind: "login", error: LOGIN_ERRORS.has(err ?? "") ? (err as LoginError) : null });
+    }
+    const ogPng = path.match(/^\/og\/([^/]+)\.png$/);
+    if (ogPng && (req.method === "GET" || req.method === "HEAD")) {
+      let code = "";
+      try { code = decodeURIComponent(ogPng[1]!); } catch { /* bad escape */ }
+      return CODE_RE.test(code) ? serveOgImage(env, code) : new Response("Not Found", { status: 404 });
     }
     if (path === "/health") return json({ ok: true });
     if (path === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain" } });

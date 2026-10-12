@@ -19,6 +19,8 @@
   // 短码 -> 长链接。部署前先创建：npx wrangler kv namespace create shortlink-personal-KV，把 id 填进来
   "kv_namespaces": [{ "binding": "LINKS", "id": "4e73ff37c7184ad5ad35ba14cb36866e" }],
   // 访问统计：Workers Analytics Engine（数据集首次写入时自动创建）
+  // 社交预览「随机」：调 vector-wallpapers 的 OgImage 入口（那边部署好 OgImage 后取消注释）
+  // "services": [{ "binding": "WALLPAPERS", "service": "vector-wallpapers", "entrypoint": "OgImage" }],
   "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "shortlink_personal_clicks" }],
   "vars": {
     // 只有这些 Google 账号能进后台（逗号分隔）

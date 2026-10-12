@@ -166,3 +166,20 @@ console.log("✓ all tests passed");
   assert.equal(pickTarget({ ...link, devices: { ...link.devices, ipad: "https://pad" } }, { device: "ipad", country: "XX" }), "https://pad");
 }
 console.log("✓ 设备识别");
+
+// —— 随机预览图（Service Binding 假实现）——
+{
+  (env as any).WALLPAPERS = { render: async (seed: number) => ({ png: new Uint8Array([137, 80, 78, 71, seed & 255]).buffer, pattern: "dots" }) };
+  await api("/api/links", "POST", { url: "https://example.com/og", code: "ogt" });
+  const r = await api("/api/links/ogt/og-image", "POST");
+  assert.equal(r.status, 200);
+  const { image } = (await r.json()) as { image: string };
+  assert.match(image, /^http:\/\/localhost:8787\/og\/ogt\.png\?v=\d+$/);
+  const png = await visit("/og/ogt.png");
+  assert.equal(png.status, 200);
+  assert.equal(png.headers.get("Content-Type"), "image/png");
+  assert.equal((await api("/api/links/nope/og-image", "POST")).status, 404);
+  assert.equal((await api("/api/links/ogt", "DELETE")).status, 200);
+  assert.equal((await visit("/og/ogt.png")).status, 404);
+}
+console.log("✓ 预览图");
