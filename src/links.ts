@@ -3,8 +3,8 @@
 import { codeLength, type Env } from "./env.ts";
 import { hashPassword, type PasswordHash } from "./password.ts";
 
-export interface DeviceRules { ios?: string; android?: string; mobile?: string; desktop?: string }
-export interface OgMeta { title?: string; description?: string; image?: string }
+import type { DeviceRules, LinkInput, LinkView, OgMeta } from "./shared/types.ts";
+export type { DeviceRules, LinkInput, LinkView, OgMeta };
 
 export interface LinkRecord {
   url: string;
@@ -22,23 +22,6 @@ export interface LinkRecord {
   countries?: Record<string, string>;
   /** 社交预览（爬虫访问时返回 OG 标签）。 */
   og?: OgMeta;
-}
-
-/** 给后台看的视图：去掉密码哈希。 */
-export type LinkView = Omit<LinkRecord, "password"> & { code: string; hasPassword: boolean };
-
-/** 新建 / 编辑的输入。编辑时缺省字段 = 保持不变；空字符串 / null = 清除。 */
-export interface LinkInput {
-  url?: string;
-  code?: string;
-  note?: string | null;
-  expiresAt?: string | null;
-  /** 新密码；null = 移除密码。 */
-  password?: string | null;
-  unsafe?: boolean;
-  devices?: DeviceRules | null;
-  countries?: Record<string, string> | null;
-  og?: OgMeta | null;
 }
 
 const PREFIX = "link:";

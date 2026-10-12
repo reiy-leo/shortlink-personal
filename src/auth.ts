@@ -21,7 +21,7 @@ const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
 
-export type LoginError = "unconfigured" | "denied" | "state" | "token" | "id_token" | "unverified" | "forbidden";
+import type { LoginError } from "./shared/types.ts";
 
 const now = () => Math.floor(Date.now() / 1000);
 const isSecure = (req: Request) => new URL(req.url).protocol === "https:";

@@ -1,6 +1,8 @@
 export interface Env {
   /** KV：`link:<code>` -> LinkRecord（JSON）。 */
   LINKS: KVNamespace;
+  /** Workers Static Assets：web/ 构建出的前端（public/）。 */
+  ASSETS?: Fetcher;
   /** Workers Analytics Engine：每次跳转写一个数据点。 */
   ANALYTICS?: AnalyticsEngineDataset;
 

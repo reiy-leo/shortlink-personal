@@ -7,6 +7,7 @@
 import { datasetName, statsQueryable, statsRecording, type Env } from "./env.ts";
 import { CODE_RE } from "./links.ts";
 import type { Visitor } from "./visitor.ts";
+import type { LinkStats } from "./shared/types.ts";
 
 export function recordClick(env: Env, code: string, v: Visitor): void {
   if (!statsRecording(env) || v.bot) return;
@@ -29,13 +30,6 @@ async function sql<T>(env: Env, query: string): Promise<T[]> {
 }
 
 const DIMENSIONS = { countries: "blob2", devices: "blob4", os: "blob5", browsers: "blob6", referers: "blob7" } as const;
-export type Row = { name: string; clicks: number };
-export interface LinkStats {
-  days: number;
-  total: number;
-  daily: { day: string; clicks: number }[];
-  top: Record<keyof typeof DIMENSIONS, Row[]>;
-}
 
 const clampDays = (d: number) => (d === 30 || d === 90 ? d : 7);
 

@@ -13,9 +13,12 @@ import { clickTotals, linkStats, recordClick } from "./analytics.ts";
 import { callback, getAdmin, login, logout } from "./auth.ts";
 import { statsQueryable, statsRecording, type Env } from "./env.ts";
 import { CODE_RE, createLink, deleteLink, getLink, InputError, isExpired, listLinks, updateLink, type LinkInput } from "./links.ts";
-import { adminPage, expiredPage, homePage, loginPage, notFoundPage, passwordPage, previewPage, warningPage } from "./pages.ts";
+import { previewPage, renderPage } from "./html.ts";
+import type { LoginError } from "./shared/types.ts";
 import { checkPassword } from "./password.ts";
 import { pickTarget, visitorOf } from "./visitor.ts";
+
+const LOGIN_ERRORS = new Set(["unconfigured", "denied", "state", "token", "id_token", "unverified", "forbidden"]);
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
@@ -67,8 +70,8 @@ async function handleApi(req: Request, env: Env, path: string): Promise<Response
 
 async function handleRedirect(req: Request, env: Env, ctx: ExecutionContext, code: string): Promise<Response> {
   const link = await getLink(env, code);
-  if (!link) return notFoundPage();
-  if (isExpired(link)) return expiredPage();
+  if (!link) return renderPage(env, req, { kind: "notfound" }, 404);
+  if (isExpired(link)) return renderPage(env, req, { kind: "expired" }, 410);
 
   const v = visitorOf(req);
   const shortUrl = new URL("/" + code, req.url).toString();
@@ -77,15 +80,17 @@ async function handleRedirect(req: Request, env: Env, ctx: ExecutionContext, cod
   if (v.bot && link.og && req.method !== "POST") return previewPage(link.og, shortUrl, link.password ? null : pickTarget(link, v));
 
   if (link.password) {
-    if (req.method !== "POST") return passwordPage(code, false);
+    if (req.method !== "POST") return renderPage(env, req, { kind: "password", code, wrong: false });
     const form = await req.formData().catch(() => null);
     const pw = form?.get("password");
-    if (typeof pw !== "string" || !(await checkPassword(pw, link.password))) return passwordPage(code, true);
+    if (typeof pw !== "string" || !(await checkPassword(pw, link.password))) {
+      return renderPage(env, req, { kind: "password", code, wrong: true }, 401);
+    }
   }
 
   const target = pickTarget(link, v);
   ctx.waitUntil(Promise.resolve().then(() => recordClick(env, code, v)).catch((e) => console.error("recordClick", e)));
-  if (link.unsafe) return warningPage(target);
+  if (link.unsafe) return renderPage(env, req, { kind: "warning", target });
   return new Response(null, {
     status: 302,
     headers: { Location: target, "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer-when-downgrade" },
@@ -103,19 +108,28 @@ export default {
     if (path.startsWith("/api/")) return handleApi(req, env, path);
     if (path === "/admin" || path === "/admin/") {
       const user = await getAdmin(req, env);
-      return user
-        ? adminPage(user, url.origin, { recording: statsRecording(env), queryable: statsQueryable(env) })
-        : loginPage(url.searchParams.get("login_error"));
+      if (user) {
+        return renderPage(env, req, {
+          kind: "admin",
+          user: { email: user.email, ...(user.name ? { name: user.name } : {}), ...(user.picture ? { picture: user.picture } : {}) },
+          origin: url.origin,
+          stats: { recording: statsRecording(env), queryable: statsQueryable(env) },
+        });
+      }
+      const err = url.searchParams.get("login_error");
+      return renderPage(env, req, { kind: "login", error: LOGIN_ERRORS.has(err ?? "") ? (err as LoginError) : null });
     }
     if (path === "/health") return json({ ok: true });
     if (path === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain" } });
-    if (path === "/" && (req.method === "GET" || req.method === "HEAD")) return homePage();
+    if (path === "/" && (req.method === "GET" || req.method === "HEAD")) return renderPage(env, req, { kind: "home" });
+    // 前端静态资源（正常情况下由 Static Assets 直接响应，不会走到这里）
+    if (path.startsWith("/assets/") && env.ASSETS) return env.ASSETS.fetch(req);
 
     if (req.method === "GET" || req.method === "HEAD" || req.method === "POST") {
       let code = "";
       try { code = decodeURIComponent(path.slice(1).replace(/\/$/, "")); } catch { /* bad escape */ }
       if (CODE_RE.test(code)) return handleRedirect(req, env, ctx, code);
-      return notFoundPage();
+      return renderPage(env, req, { kind: "notfound" }, 404);
     }
     return new Response("Method Not Allowed", { status: 405 });
   },
