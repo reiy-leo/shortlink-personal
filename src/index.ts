@@ -1,14 +1,21 @@
 // shortlink-personal：Rei 的个人短链服务（s.rei8t.dev）
 //
-//   GET  /:code              302 跳转到长链接（KV），不存在则 404
+//   GET  /:code              跳转（过期 → 410；密码 → 输入页；警告页；设备/国家分流；爬虫 → OG 预览）
+//   POST /:code              提交访问密码
 //   GET  /admin              后台（仅 ADMIN_EMAILS 里的 Google 账号）
 //   GET  /auth/login | /auth/callback, POST /auth/logout   Google OAuth
-//   GET  /api/links          列出短链        POST /api/links { url, code?, note? }   新建
-//   DELETE /api/links/:code  删除
+//   GET  /api/links                     列出短链（+ 近 90 天点击）
+//   POST /api/links                     新建
+//   PUT  /api/links/:code               编辑
+//   DELETE /api/links/:code             删除
+//   GET  /api/links/:code/stats?days=7  访问统计明细
+import { clickTotals, linkStats, recordClick } from "./analytics.ts";
 import { callback, getAdmin, login, logout } from "./auth.ts";
-import { clickStatsEnabled, type Env } from "./env.ts";
-import { CODE_RE, countClick, createLink, deleteLink, listLinks, resolve } from "./links.ts";
-import { adminPage, homePage, loginPage, notFoundPage } from "./pages.ts";
+import { statsQueryable, statsRecording, type Env } from "./env.ts";
+import { CODE_RE, createLink, deleteLink, getLink, InputError, isExpired, listLinks, updateLink, type LinkInput } from "./links.ts";
+import { adminPage, expiredPage, homePage, loginPage, notFoundPage, passwordPage, previewPage, warningPage } from "./pages.ts";
+import { checkPassword } from "./password.ts";
+import { pickTarget, visitorOf } from "./visitor.ts";
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
@@ -19,26 +26,70 @@ const sameOrigin = (req: Request) => {
   return o === null ? req.method === "GET" : o === new URL(req.url).origin;
 };
 
+async function readInput(req: Request): Promise<LinkInput> {
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object" || Array.isArray(body)) throw new InputError("请求体需要是 JSON 对象");
+  return body as LinkInput;
+}
+
 async function handleApi(req: Request, env: Env, path: string): Promise<Response> {
   if (!(await getAdmin(req, env))) return json({ error: "未登录或无权限" }, 401);
   if (req.method !== "GET" && !sameOrigin(req)) return json({ error: "来源不合法" }, 403);
-
-  if (path === "/api/links") {
-    if (req.method === "GET") return json({ links: await listLinks(env, clickStatsEnabled(env)) });
-    if (req.method === "POST") {
-      const body = (await req.json().catch(() => null)) as { url?: string; code?: string; note?: string } | null;
-      if (!body || typeof body.url !== "string") return json({ error: "缺少长链接 url" }, 400);
-      const r = await createLink(env, { url: body.url, code: typeof body.code === "string" ? body.code : undefined, note: typeof body.note === "string" ? body.note : undefined });
-      return "error" in r ? json({ error: r.error }, r.status) : json({ link: r.link }, 201);
+  try {
+    if (path === "/api/links") {
+      if (req.method === "GET") {
+        const [links, clicks] = await Promise.all([listLinks(env), clickTotals(env)]);
+        return json({ links, clicks });
+      }
+      if (req.method === "POST") return json({ link: await createLink(env, await readInput(req)) }, 201);
+      return json({ error: "不支持的方法" }, 405);
     }
-    return json({ error: "不支持的方法" }, 405);
+    const stats = path.match(/^\/api\/links\/([^/]+)\/stats$/);
+    if (stats && req.method === "GET") {
+      if (!statsQueryable(env)) return json({ error: "统计查询未配置（需要 ANALYTICS 绑定、CF_ACCOUNT_ID、CF_API_TOKEN）" }, 503);
+      const days = Number(new URL(req.url).searchParams.get("days") ?? 7);
+      return json(await linkStats(env, decodeURIComponent(stats[1]!), days));
+    }
+    const one = path.match(/^\/api\/links\/([^/]+)$/);
+    if (one) {
+      const code = decodeURIComponent(one[1]!);
+      if (req.method === "PUT") return json({ link: await updateLink(env, code, await readInput(req)) });
+      if (req.method === "DELETE") return (await deleteLink(env, code)) ? json({ ok: true }) : json({ error: "短码不存在" }, 404);
+      return json({ error: "不支持的方法" }, 405);
+    }
+    return json({ error: "未找到" }, 404);
+  } catch (e) {
+    if (e instanceof InputError) return json({ error: e.message }, e.status);
+    console.error("api error", e);
+    return json({ error: e instanceof Error ? e.message : "服务器错误" }, 500);
   }
-  const m = path.match(/^\/api\/links\/([^/]+)$/);
-  if (m && req.method === "DELETE") {
-    const code = decodeURIComponent(m[1]!);
-    return (await deleteLink(env, code)) ? json({ ok: true }) : json({ error: "短码不存在" }, 404);
+}
+
+async function handleRedirect(req: Request, env: Env, ctx: ExecutionContext, code: string): Promise<Response> {
+  const link = await getLink(env, code);
+  if (!link) return notFoundPage();
+  if (isExpired(link)) return expiredPage();
+
+  const v = visitorOf(req);
+  const shortUrl = new URL("/" + code, req.url).toString();
+
+  // 社交平台爬虫：有自定义预览就返回 OG 页；有密码时不暴露目标地址
+  if (v.bot && link.og && req.method !== "POST") return previewPage(link.og, shortUrl, link.password ? null : pickTarget(link, v));
+
+  if (link.password) {
+    if (req.method !== "POST") return passwordPage(code, false);
+    const form = await req.formData().catch(() => null);
+    const pw = form?.get("password");
+    if (typeof pw !== "string" || !(await checkPassword(pw, link.password))) return passwordPage(code, true);
   }
-  return json({ error: "未找到" }, 404);
+
+  const target = pickTarget(link, v);
+  ctx.waitUntil(Promise.resolve().then(() => recordClick(env, code, v)).catch((e) => console.error("recordClick", e)));
+  if (link.unsafe) return warningPage(target);
+  return new Response(null, {
+    status: 302,
+    headers: { Location: target, "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer-when-downgrade" },
+  });
 }
 
 export default {
@@ -52,22 +103,18 @@ export default {
     if (path.startsWith("/api/")) return handleApi(req, env, path);
     if (path === "/admin" || path === "/admin/") {
       const user = await getAdmin(req, env);
-      return user ? adminPage(user, url.origin, clickStatsEnabled(env)) : loginPage(url.searchParams.get("login_error"));
+      return user
+        ? adminPage(user, url.origin, { recording: statsRecording(env), queryable: statsQueryable(env) })
+        : loginPage(url.searchParams.get("login_error"));
     }
     if (path === "/health") return json({ ok: true });
     if (path === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain" } });
     if (path === "/" && (req.method === "GET" || req.method === "HEAD")) return homePage();
 
-    // /:code → 302
-    if (req.method === "GET" || req.method === "HEAD") {
-      const code = decodeURIComponent(path.slice(1).replace(/\/$/, ""));
-      if (CODE_RE.test(code)) {
-        const target = await resolve(env, code);
-        if (target) {
-          if (clickStatsEnabled(env)) ctx.waitUntil(countClick(env, code).catch((e) => console.error("countClick", e)));
-          return new Response(null, { status: 302, headers: { Location: target, "Cache-Control": "private, max-age=0", "Referrer-Policy": "no-referrer-when-downgrade" } });
-        }
-      }
+    if (req.method === "GET" || req.method === "HEAD" || req.method === "POST") {
+      let code = "";
+      try { code = decodeURIComponent(path.slice(1).replace(/\/$/, "")); } catch { /* bad escape */ }
+      if (CODE_RE.test(code)) return handleRedirect(req, env, ctx, code);
       return notFoundPage();
     }
     return new Response("Method Not Allowed", { status: 405 });
