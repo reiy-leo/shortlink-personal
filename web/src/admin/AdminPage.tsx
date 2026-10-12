@@ -45,7 +45,7 @@ const StatsDialog = lazy(() => import("./StatsDialog.tsx").then((m) => ({ defaul
 interface Props {
   user: { email: string; name?: string; picture?: string };
   origin: string;
-  stats: { recording: boolean; queryable: boolean };
+  stats: { recording: boolean; queryable: boolean; missing: string[] };
 }
 
 /** 过期时间：纯文字，"2026/10/15 01:24 +0800 过期 · 还剩 2天 3小时 19分钟" */
