@@ -1,6 +1,6 @@
 // 访客 / 登录侧页面：统一用 Kumo 的 Empty 作为居中状态页。
 import type { ReactNode } from "react";
-import { Banner, Button, ClipboardText, Empty, SensitiveInput, Text } from "@cloudflare/kumo";
+import { Banner, Button, ClipboardText, Empty, LinkButton, SensitiveInput, Text } from "@cloudflare/kumo";
 import {
   ClockCountdownIcon,
   GoogleLogoIcon,
@@ -97,9 +97,9 @@ export function WarningPage({ target }: { target: string }) {
               <Button variant="secondary" onClick={() => history.back()}>
                 返回
               </Button>
-              <a href={target} rel="noopener noreferrer">
-                <Button variant="primary">我了解风险，继续访问</Button>
-              </a>
+              <LinkButton href={target} rel="noopener noreferrer" variant="primary">
+                我了解风险，继续访问
+              </LinkButton>
             </div>
           </div>
         }
@@ -128,11 +128,9 @@ export function LoginPage({ error }: { error: LoginError | null }) {
           title="短链后台"
           description="仅限管理员，使用 Google 账号登录。"
           contents={
-            <a href="/auth/login?returnTo=/admin">
-              <Button variant="primary" icon={GoogleLogoIcon}>
-                使用 Google 登录
-              </Button>
-            </a>
+            <LinkButton href="/auth/login?returnTo=/admin" variant="primary" icon={GoogleLogoIcon}>
+              使用 Google 登录
+            </LinkButton>
           }
         />
       </div>
