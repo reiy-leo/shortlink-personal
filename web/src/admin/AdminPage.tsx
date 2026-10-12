@@ -1,5 +1,5 @@
 // 后台主页：顶栏 + 链接表格 + 新建/编辑、统计、删除三个对话框（始终挂载，用 open 控制）。
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Badge,
   Banner,
@@ -38,7 +38,8 @@ import type { LinkView } from "../../../src/shared/types.ts";
 import { api } from "../api.ts";
 import { fmtTime, isExpired } from "./format.ts";
 import { LinkDialog } from "./LinkDialog.tsx";
-import { StatsDialog } from "./StatsDialog.tsx";
+// 图表库（ECharts）只在需要看统计时加载
+const StatsDialog = lazy(() => import("./StatsDialog.tsx").then((m) => ({ default: m.StatsDialog })));
 
 interface Props {
   user: { email: string; name?: string; picture?: string };
@@ -297,7 +298,11 @@ export function AdminPage({ user, origin, stats }: Props) {
         }}
       />
 
-      <StatsDialog code={statsCode} open={statsOpen} onOpenChange={setStatsOpen} />
+      {stats.queryable && (
+        <Suspense fallback={null}>
+          <StatsDialog code={statsCode} open={statsOpen} onOpenChange={setStatsOpen} />
+        </Suspense>
+      )}
 
       <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
         <Dialog size="sm" className="px-6 py-5">

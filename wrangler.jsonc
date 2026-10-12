@@ -9,6 +9,13 @@
   // 自定义域名（zone: rei8t.dev）
   "routes": [{ "pattern": "s.rei8t.dev", "custom_domain": true }],
   "observability": { "enabled": true },
+  // 前端（React + Kumo）：pnpm build 把 web/ 构建到 ./public。
+  // /assets/* 由 Static Assets 直接响应；其余请求先进 Worker（跳转、API、注入页面数据）。
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/*", "!/assets/*"]
+  },
   // 短码 -> 长链接。部署前先创建：npx wrangler kv namespace create shortlink-personal-KV，把 id 填进来
   "kv_namespaces": [{ "binding": "LINKS", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }],
   // 访问统计：Workers Analytics Engine（数据集首次写入时自动创建）
