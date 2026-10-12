@@ -113,7 +113,7 @@ export default {
           kind: "admin",
           user: { email: user.email, ...(user.name ? { name: user.name } : {}), ...(user.picture ? { picture: user.picture } : {}) },
           origin: url.origin,
-          stats: { recording: statsRecording(env), queryable: statsQueryable(env) },
+          stats: { recording: statsRecording(env), queryable: statsQueryable(env), missing: (["CF_ACCOUNT_ID", "CF_API_TOKEN"] as const).filter((k) => !env[k]) },
         });
       }
       const err = url.searchParams.get("login_error");

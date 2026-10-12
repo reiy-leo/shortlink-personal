@@ -47,7 +47,7 @@ export type LoginError = "unconfigured" | "denied" | "state" | "token" | "id_tok
 
 /** Worker 注入到 HTML 里的页面数据，前端据此渲染对应页面。 */
 export type PageData =
-  | { kind: "admin"; user: { email: string; name?: string; picture?: string }; origin: string; stats: { recording: boolean; queryable: boolean } }
+  | { kind: "admin"; user: { email: string; name?: string; picture?: string }; origin: string; stats: { recording: boolean; queryable: boolean; missing: string[] } }
   | { kind: "login"; error: LoginError | null }
   | { kind: "password"; code: string; wrong: boolean }
   | { kind: "warning"; target: string }

@@ -149,7 +149,7 @@ export function AdminPage({ user, origin, stats }: Props) {
   const statsHint = !stats.recording
     ? "访问统计未开启：缺少 Analytics Engine 绑定，或 CLICK_STATS 为 off。"
     : !stats.queryable
-      ? "访问已在记录，但后台查看统计还需要配置 CF_ACCOUNT_ID 和 CF_API_TOKEN。"
+      ? `访问已在记录，但后台查看统计还需要在 Worker 设置里添加 ${stats.missing.join(" 和 ")}（Secret，权限 Account Analytics Read）。`
       : null;
 
   return (
