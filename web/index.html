@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>s.rei8t.dev</title>
+    <script>
+      // 跟随系统深浅色：Kumo 读 <html data-mode>
+      (function () {
+        var m = window.matchMedia("(prefers-color-scheme: dark)");
+        var set = function () { document.documentElement.dataset.mode = m.matches ? "dark" : "light"; };
+        set();
+        m.addEventListener("change", set);
+      })();
+    </script>
+    <!--PAGE_DATA-->
+  </head>
+  <body class="bg-kumo-canvas text-kumo-default">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
