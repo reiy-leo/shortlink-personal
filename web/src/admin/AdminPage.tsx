@@ -1,5 +1,5 @@
 // 后台主页：顶栏 + 链接表格 + 新建/编辑、统计、删除三个对话框（始终挂载，用 open 控制）。
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   Banner,
@@ -85,16 +85,33 @@ export function AdminPage({ user, origin, stats }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
+  // KV 的 list 最多有约 60 秒延迟：刚新建/修改/删除的短链先在本地记一分钟，合并进列表结果
+  const pending = useRef(new Map<string, { link: LinkView | null; until: number }>());
+  const merge = useCallback((list: LinkView[]) => {
+    const now = Date.now();
+    const byCode = new Map(list.map((l) => [l.code, l]));
+    for (const [code, p] of pending.current) {
+      if (p.until < now) pending.current.delete(code);
+      else if (p.link) byCode.set(code, p.link);
+      else byCode.delete(code);
+    }
+    return [...byCode.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, []);
+  const remember = useCallback((code: string, link: LinkView | null) => {
+    pending.current.set(code, { link, until: Date.now() + 60_000 });
+    setLinks((prev) => merge(prev ?? []));
+  }, [merge]);
+
   const load = useCallback(async () => {
     try {
       const d = await api.list();
-      setLinks(d.links);
+      setLinks(merge(d.links));
       setClicks(d.clicks);
       setLoadError(null);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+  }, [merge]);
 
   useEffect(() => {
     void load();
@@ -134,6 +151,7 @@ export function AdminPage({ user, origin, stats }: Props) {
     setDeleteBusy(true);
     try {
       await api.remove(deleting.code);
+      remember(deleting.code, null);
       toast.add({ title: `已删除 /${deleting.code}`, variant: "success" });
       setDeleteOpen(false);
       void load();
@@ -297,6 +315,7 @@ export function AdminPage({ user, origin, stats }: Props) {
         origin={origin}
         onOpenChange={setEditOpen}
         onSaved={async (link, created) => {
+          remember(link.code, link);
           if (created) {
             await navigator.clipboard.writeText(shortUrl(link.code)).catch(() => {});
             toast.add({ title: "短链已创建并复制", description: shortUrl(link.code), variant: "success" });
