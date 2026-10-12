@@ -17,7 +17,7 @@
     "run_worker_first": ["/*", "!/assets/*"]
   },
   // 短码 -> 长链接。部署前先创建：npx wrangler kv namespace create shortlink-personal-KV，把 id 填进来
-  "kv_namespaces": [{ "binding": "LINKS", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }],
+  "kv_namespaces": [{ "binding": "LINKS", "id": "4e73ff37c7184ad5ad35ba14cb36866e" }],
   // 访问统计：Workers Analytics Engine（数据集首次写入时自动创建）
   "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "shortlink_personal_clicks" }],
   "vars": {

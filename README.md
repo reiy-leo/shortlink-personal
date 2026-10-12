@@ -145,3 +145,15 @@ Google 只证明「你是这个邮箱」，能否进后台由 `ADMIN_EMAILS` 白
 - [x] 社交预览：自定义 OG
 - [x] 全站界面改用 Kumo 组件，遵循 kumo-design
 - [ ] 二维码、导入导出、API Token 调用（待定）
+
+## 部署（API Token / 内联资源）
+
+用 API Token 部署时 Static Assets 上传接口会 401，所以线上用内联版本：
+
+```bash
+pnpm deploy:inline   # vite build → public/ 内联进 worker-inline/assets.generated.ts → wrangler deploy -c wrangler.inline.jsonc
+```
+
+- KV：`shortlink-personal-KV`（id 已写入 wrangler.jsonc）
+- 已设 secret：`SESSION_SECRET`；Google 登录需再加 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+- 访问统计：需先在 Cloudflare 控制台启用 Analytics Engine，再取消 wrangler.inline.jsonc 中 `analytics_engine_datasets` 的注释并设置 `CF_API_TOKEN`

@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "test": "node scripts/kumo-lint.mjs && node --experimental-strip-types test/run-tests.ts",
     "deploy": "pnpm build && wrangler deploy",
-    "lint": "node scripts/kumo-lint.mjs"
+    "lint": "node scripts/kumo-lint.mjs",
+    "deploy:inline": "pnpm build && node scripts/build-inline-assets.mjs && wrangler deploy -c wrangler.inline.jsonc"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251001.0",
