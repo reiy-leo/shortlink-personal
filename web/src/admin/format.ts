@@ -56,7 +56,10 @@ export const hostOf = (url: string) => {
   }
 };
 
-const DEVICE_NAMES: Record<string, string> = { ios: "iOS", android: "Android", mobile: "其它手机", desktop: "桌面" };
+const DEVICE_NAMES: Record<string, string> = {
+  iphone: "iPhone", ipad: "iPad", ios: "iOS", android: "Android", harmonyos: "鸿蒙",
+  mobile: "其它手机/平板", macos: "macOS", windows: "Windows", desktop: "其它电脑",
+};
 export const deviceName = (k: string) => DEVICE_NAMES[k] ?? k;
 
 const regionNames = typeof Intl !== "undefined" && "DisplayNames" in Intl ? new Intl.DisplayNames(["zh-CN"], { type: "region" }) : null;

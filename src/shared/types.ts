@@ -1,6 +1,9 @@
 // Worker 与前端共用的纯类型（不依赖 Workers / DOM 类型）。
 
-export interface DeviceRules { ios?: string; android?: string; mobile?: string; desktop?: string }
+export interface DeviceRules {
+  iphone?: string; ipad?: string; ios?: string; android?: string; harmonyos?: string; mobile?: string;
+  macos?: string; windows?: string; desktop?: string;
+}
 export interface OgMeta { title?: string; description?: string; image?: string }
 
 /** 给后台看的短链视图（不含密码哈希）。 */

@@ -75,13 +75,14 @@ export function ExpiryPicker({ value, onChange, description }: Props) {
             defaultMonth={date ?? today}
           />
           <div className="flex items-end gap-2">
-            <Select label="时" value={hh} onValueChange={(v) => update({ hh: String(v) })} disabled={!date} className="w-20">
+            <Select alignItemWithTrigger={false} label="时" value={hh} onValueChange={(v) => update({ hh: String(v) })} disabled={!date} className="w-20">
               {HOURS.map((h) => <Select.Option key={h} value={h}>{h}</Select.Option>)}
             </Select>
-            <Select label="分" value={mm} onValueChange={(v) => update({ mm: String(v) })} disabled={!date} className="w-20">
+            <Select alignItemWithTrigger={false} label="分" value={mm} onValueChange={(v) => update({ mm: String(v) })} disabled={!date} className="w-20">
               {minutes.map((m) => <Select.Option key={m} value={m}>{m}</Select.Option>)}
             </Select>
             <Select
+              alignItemWithTrigger={false}
               label="时区"
               value={off}
               onValueChange={(v) => update({ off: Number(v) })}

@@ -10,7 +10,7 @@ Rei 的个人短链服务，跑在单个 Cloudflare Worker 上，域名 **s.rei8
 - **短链跳转**：自定义短码或自动生成，302 跳转
 - **访问统计**：Workers Analytics Engine 记录每次跳转（爬虫不计），后台看近 7 / 30 / 90 天的每日趋势、国家/地区、设备、系统、浏览器、来源
 - **链接控制**：过期时间（过期后返回 410）、访问密码（PBKDF2 哈希存储）、「不安全链接」警告页
-- **智能跳转**：按设备（iOS / Android / 其它手机 / 桌面）或国家跳不同地址，优先级 设备 → 国家 → 默认
+- **智能跳转**：按设备或国家跳不同地址，优先级 设备 → 国家 → 默认。设备用 [bowser](https://github.com/bowser-js/bowser)（MIT）识别，可选 iPhone / iPad / iOS（两者通用）/ Android / 鸿蒙 / 所有手机平板 / macOS / Windows / 所有电脑；先匹配具体设备再回退通用规则（iPhone → iOS → 所有手机平板；macOS → 所有电脑），老鸿蒙（UA 带 Android）没配鸿蒙规则时走 Android。注意 iPadOS 13+ Safari 默认伪装成 Mac，会被识别为 macOS
 - **社交预览**：自定义 OG 标题、描述、图片；微信、Telegram、X、Slack 等爬虫抓取时返回预览页。设了密码的链接，预览页不暴露目标地址
 
 ## 技术栈

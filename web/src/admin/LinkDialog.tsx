@@ -10,9 +10,15 @@ import { ExpiryPicker } from "./ExpiryPicker.tsx";
 type Tab = "basic" | "control" | "routing" | "preview";
 interface CountryRow { id: number; code: string; url: string }
 type DeviceKey = keyof DeviceRules;
-const DEVICE_KEYS: DeviceKey[] = ["ios", "android", "mobile", "desktop"];
-const DEVICE_LABELS: Record<DeviceKey, string> = { ios: "iOS", android: "Android", mobile: "其它手机", desktop: "桌面电脑" };
-const DEVICE_PLACEHOLDERS: Record<DeviceKey, string> = { ios: "https://apps.apple.com/…", android: "https://play.google.com/…", mobile: "https://m.example.com", desktop: "https://example.com" };
+const DEVICE_KEYS: DeviceKey[] = ["iphone", "ipad", "ios", "android", "harmonyos", "mobile", "macos", "windows", "desktop"];
+const DEVICE_LABELS: Record<DeviceKey, string> = {
+  iphone: "iPhone", ipad: "iPad", ios: "iOS（iPhone + iPad）", android: "Android", harmonyos: "鸿蒙",
+  mobile: "所有手机/平板", macos: "macOS", windows: "Windows", desktop: "所有电脑",
+};
+const DEVICE_PLACEHOLDERS: Record<DeviceKey, string> = {
+  iphone: "https://apps.apple.com/…", ipad: "https://apps.apple.com/…", ios: "https://apps.apple.com/…", android: "https://play.google.com/…",
+  harmonyos: "https://appgallery.huawei.com/…", mobile: "https://m.example.com", macos: "https://apps.apple.com/…", windows: "https://apps.microsoft.com/…", desktop: "https://example.com",
+};
 
 interface FormState {
   url: string;
@@ -34,7 +40,7 @@ interface FormState {
 let rowId = 0;
 const empty = (): FormState => ({
   url: "", code: "", note: "", expiresAt: "", password: "", clearPassword: false, unsafe: false,
-  devices: { ios: "", android: "", mobile: "", desktop: "" }, deviceRows: [], countries: [], ogTitle: "", ogDescription: "", ogImage: "",
+  devices: Object.fromEntries(DEVICE_KEYS.map((k) => [k, ""])) as Record<DeviceKey, string>, deviceRows: [], countries: [], ogTitle: "", ogDescription: "", ogImage: "",
 });
 
 const fromLink = (l: LinkView): FormState => ({
@@ -45,7 +51,7 @@ const fromLink = (l: LinkView): FormState => ({
   password: "",
   clearPassword: false,
   unsafe: Boolean(l.unsafe),
-  devices: { ios: l.devices?.ios ?? "", android: l.devices?.android ?? "", mobile: l.devices?.mobile ?? "", desktop: l.devices?.desktop ?? "" },
+  devices: Object.fromEntries(DEVICE_KEYS.map((k) => [k, l.devices?.[k] ?? ""])) as Record<DeviceKey, string>,
   deviceRows: DEVICE_KEYS.filter((k) => Boolean(l.devices?.[k])),
   countries: Object.entries(l.countries ?? {}).map(([code, url]) => ({ id: ++rowId, code, url })),
   ogTitle: l.og?.title ?? "",
@@ -217,12 +223,13 @@ export function LinkDialog(props: {
                 <div className="grid gap-3">
                   <div className="grid gap-1">
                     <Text variant="heading" as="h3">按设备</Text>
-                    <Text variant="secondary">优先级最高。没填的设备走国家规则或默认长链接。</Text>
+                    <Text variant="secondary">优先级最高，先匹配具体设备，再匹配「iOS」「所有手机/平板」「所有电脑」这类通用规则；都没有就走国家规则或默认长链接。</Text>
                   </div>
                   {f.deviceRows.map((k) => (
                     <div key={k} className="flex items-start gap-2">
-                      <div className="w-32 shrink-0">
+                      <div className="w-44 shrink-0">
                         <Select
+                          alignItemWithTrigger={false}
                           aria-label="设备类型"
                           className="w-full"
                           value={k}

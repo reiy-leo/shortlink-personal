@@ -135,3 +135,34 @@ assert.match(await fb.text(), /链接不存在/);
 
 
 console.log("✓ all tests passed");
+
+// —— 设备识别与规则回退 ——
+{
+  const { deviceOf, pickTarget } = await import("../src/visitor.ts");
+  const UA = {
+    iphone: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    ipad: "Mozilla/5.0 (iPad; CPU OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+    harmony4: "Mozilla/5.0 (Linux; Android 12; HarmonyOS; NOH-AN00; HMSCore 6.11) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99 Mobile Safari/537.36",
+    harmonyNext: "Mozilla/5.0 (Phone; OpenHarmony 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 ArkWeb/4.1.6.1 Mobile",
+    android: "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36",
+    mac: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17 Safari/605.1.15",
+    win: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+    linux: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+  };
+  assert.equal(deviceOf(UA.iphone), "iphone");
+  assert.equal(deviceOf(UA.ipad), "ipad");
+  assert.equal(deviceOf(UA.harmony4), "harmonyos");
+  assert.equal(deviceOf(UA.harmonyNext), "harmonyos");
+  assert.equal(deviceOf(UA.android), "android");
+  assert.equal(deviceOf(UA.mac), "macos");
+  assert.equal(deviceOf(UA.win), "windows");
+  assert.equal(deviceOf(UA.linux), "desktop");
+  const link = { url: "https://d", devices: { ios: "https://ios", android: "https://and", desktop: "https://pc" } } as any;
+  const t = (k: keyof typeof UA) => pickTarget(link, { device: deviceOf(UA[k]), country: "XX" }, UA[k]);
+  assert.equal(t("ipad"), "https://ios");
+  assert.equal(t("harmony4"), "https://and"); // 老鸿蒙回退 Android
+  assert.equal(t("harmonyNext"), "https://d");
+  assert.equal(t("mac"), "https://pc");
+  assert.equal(pickTarget({ ...link, devices: { ...link.devices, ipad: "https://pad" } }, { device: "ipad", country: "XX" }), "https://pad");
+}
+console.log("✓ 设备识别");

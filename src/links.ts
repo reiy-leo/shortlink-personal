@@ -61,7 +61,10 @@ const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v
 function cleanDevices(d: DeviceRules | null | undefined): DeviceRules | undefined {
   if (!d) return undefined;
   const out: DeviceRules = {};
-  const names: Record<keyof DeviceRules, string> = { ios: "iOS 链接", android: "Android 链接", mobile: "手机链接", desktop: "桌面链接" };
+  const names: Record<keyof DeviceRules, string> = {
+    ios: "iOS 链接", iphone: "iPhone 链接", ipad: "iPad 链接", android: "Android 链接", harmonyos: "鸿蒙链接",
+    mobile: "手机/平板链接", macos: "macOS 链接", windows: "Windows 链接", desktop: "电脑链接",
+  };
   for (const k of Object.keys(names) as (keyof DeviceRules)[]) {
     if (typeof d[k] === "string" && d[k]!.trim()) out[k] = cleanUrl(d[k], names[k]);
   }

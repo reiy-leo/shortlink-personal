@@ -77,7 +77,7 @@ async function handleRedirect(req: Request, env: Env, ctx: ExecutionContext, cod
   const shortUrl = new URL("/" + code, req.url).toString();
 
   // 社交平台爬虫：有自定义预览就返回 OG 页；有密码时不暴露目标地址
-  if (v.bot && link.og && req.method !== "POST") return previewPage(link.og, shortUrl, link.password ? null : pickTarget(link, v));
+  if (v.bot && link.og && req.method !== "POST") return previewPage(link.og, shortUrl, link.password ? null : pickTarget(link, v, req.headers.get("User-Agent") ?? ""));
 
   if (link.password) {
     if (req.method !== "POST") return renderPage(env, req, { kind: "password", code, wrong: false });
@@ -88,7 +88,7 @@ async function handleRedirect(req: Request, env: Env, ctx: ExecutionContext, cod
     }
   }
 
-  const target = pickTarget(link, v);
+  const target = pickTarget(link, v, req.headers.get("User-Agent") ?? "");
   ctx.waitUntil(Promise.resolve().then(() => recordClick(env, code, v)).catch((e) => console.error("recordClick", e)));
   if (link.unsafe) return renderPage(env, req, { kind: "warning", target });
   return new Response(null, {

@@ -1,7 +1,9 @@
 // 访客识别：设备 / 系统 / 浏览器 / 爬虫，以及按规则挑选跳转目标。
+import Bowser from "bowser";
 import type { LinkRecord } from "./links.ts";
 
-export type Device = "ios" | "android" | "mobile" | "desktop";
+// 设备 = 跳转规则里能选的类型；识别用 bowser（MIT），鸿蒙单独判断（HarmonyOS 4 及以前 UA 里同时有 Android）。
+export type Device = "iphone" | "ipad" | "android" | "harmonyos" | "mobile" | "macos" | "windows" | "desktop";
 
 export interface Visitor {
   device: Device;
@@ -16,33 +18,37 @@ export interface Visitor {
 const BOT_RE =
   /bot\b|crawler|spider|facebookexternalhit|facebookcatalog|slackbot|telegrambot|whatsapp|discordbot|linkedinbot|twitterbot|embedly|pinterest|redditbot|skypeuripreview|vkshare|applebot|google-pagerenderer|bingpreview|mastodon|bluesky|iframely|preview/i;
 
+const isHarmony = (ua: string) => /HarmonyOS|OpenHarmony|ArkWeb/i.test(ua);
+
 export function deviceOf(ua: string): Device {
-  if (/iPhone|iPad|iPod/i.test(ua)) return "ios";
-  if (/Android/i.test(ua)) return "android";
-  if (/Mobi|Mobile|Phone/i.test(ua)) return "mobile";
-  return "desktop";
+  if (isHarmony(ua)) return "harmonyos";
+  const p = Bowser.parse(ua);
+  const type = p.platform.type;
+  switch (p.os.name) {
+    case "iOS":
+      return type === "tablet" || /iPad/i.test(ua) ? "ipad" : "iphone";
+    case "Android":
+      return "android";
+    case "macOS":
+      return "macos";
+    case "Windows":
+      return type === "mobile" || type === "tablet" ? "mobile" : "windows";
+  }
+  return type === "mobile" || type === "tablet" ? "mobile" : "desktop";
 }
 
-function osOf(ua: string): string {
-  if (/iPhone|iPad|iPod/i.test(ua)) return "iOS";
-  if (/Android/i.test(ua)) return "Android";
-  if (/HarmonyOS/i.test(ua)) return "HarmonyOS";
-  if (/Windows/i.test(ua)) return "Windows";
-  if (/Mac OS X|Macintosh/i.test(ua)) return "macOS";
-  if (/CrOS/i.test(ua)) return "ChromeOS";
-  if (/Linux/i.test(ua)) return "Linux";
-  return "其他";
+const OS_NAMES: Record<string, string> = { "Chrome OS": "ChromeOS" };
+function osOf(ua: string, p: Bowser.Parser.ParsedResult): string {
+  if (isHarmony(ua)) return "HarmonyOS";
+  const n = p.os.name;
+  return n ? (OS_NAMES[n] ?? n) : "其他";
 }
 
-function browserOf(ua: string): string {
+const BROWSER_NAMES: Record<string, string> = { WeChat: "微信", "QQ Browser": "QQ", "QQ Browser Lite": "QQ", "Microsoft Edge": "Edge", "UC Browser": "UC", "Samsung Internet for Android": "Samsung", "Huawei Browser": "华为浏览器" };
+function browserOf(ua: string, p: Bowser.Parser.ParsedResult): string {
   if (/MicroMessenger/i.test(ua)) return "微信";
-  if (/QQ\//i.test(ua)) return "QQ";
-  if (/Edg\//i.test(ua)) return "Edge";
-  if (/OPR\/|Opera/i.test(ua)) return "Opera";
-  if (/Firefox|FxiOS/i.test(ua)) return "Firefox";
-  if (/Chrome|CriOS/i.test(ua)) return "Chrome";
-  if (/Safari/i.test(ua)) return "Safari";
-  return "其他";
+  const n = p.browser.name;
+  return n ? (BROWSER_NAMES[n] ?? n) : "其他";
 }
 
 export function visitorOf(req: Request): Visitor {
@@ -53,10 +59,11 @@ export function visitorOf(req: Request): Visitor {
     const r = req.headers.get("Referer");
     if (r) referer = new URL(r).hostname || referer;
   } catch { /* ignore */ }
+  const p = Bowser.parse(ua);
   return {
     device: deviceOf(ua),
-    os: osOf(ua),
-    browser: browserOf(ua),
+    os: osOf(ua, p),
+    browser: browserOf(ua, p),
     country: (cf?.country ?? "XX").toUpperCase(),
     city: cf?.city ?? "",
     referer,
@@ -64,14 +71,25 @@ export function visitorOf(req: Request): Visitor {
   };
 }
 
+/** 每种设备依次尝试的规则：先精确，再大类（ios / mobile / desktop 为通用规则，兼容旧数据）。 */
+const FALLBACK: Record<Device, (keyof NonNullable<LinkRecord["devices"]>)[]> = {
+  iphone: ["iphone", "ios", "mobile"],
+  ipad: ["ipad", "ios", "mobile"],
+  android: ["android", "mobile"],
+  harmonyos: ["harmonyos", "mobile"],
+  mobile: ["mobile"],
+  macos: ["macos", "desktop"],
+  windows: ["windows", "desktop"],
+  desktop: ["desktop"],
+};
+
 /** 跳转目标：设备规则优先，其次国家规则，最后默认长链接。 */
-export function pickTarget(link: LinkRecord, v: Pick<Visitor, "device" | "country">): string {
+export function pickTarget(link: LinkRecord, v: Pick<Visitor, "device" | "country">, ua = ""): string {
   const d = link.devices;
   if (d) {
-    if (v.device === "ios" && d.ios) return d.ios;
-    if (v.device === "android" && d.android) return d.android;
-    if ((v.device === "ios" || v.device === "android" || v.device === "mobile") && d.mobile) return d.mobile;
-    if (v.device === "desktop" && d.desktop) return d.desktop;
+    for (const k of FALLBACK[v.device] ?? []) if (d[k]) return d[k]!;
+    // 老鸿蒙（UA 带 Android）没配鸿蒙规则时，按 Android 处理
+    if (v.device === "harmonyos" && /Android/i.test(ua) && d.android) return d.android;
   }
   const c = link.countries?.[v.country];
   return c ?? link.url;

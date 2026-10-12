@@ -27,6 +27,7 @@
   "dependencies": {
     "@cloudflare/kumo": "^2.14.0",
     "@phosphor-icons/react": "^2.1.10",
+    "bowser": "2.14.1",
     "echarts": "^6.1.0",
     "react": "^19.3.0",
     "react-day-picker": "9.14.0",
