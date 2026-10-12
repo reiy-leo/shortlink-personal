@@ -3,8 +3,8 @@
 import { codeLength, type Env } from "./env.ts";
 import { hashPassword, type PasswordHash } from "./password.ts";
 
-import type { DeviceRules, LinkInput, LinkView, OgMeta } from "./shared/types.ts";
-export type { DeviceRules, LinkInput, LinkView, OgMeta };
+import type { DeviceRules, LinkInput, LinkView } from "./shared/types.ts";
+export type { DeviceRules, LinkInput, LinkView };
 
 export interface LinkRecord {
   url: string;
@@ -20,8 +20,6 @@ export interface LinkRecord {
   devices?: DeviceRules;
   /** 智能跳转：按国家（ISO 两位代码，大写）。 */
   countries?: Record<string, string>;
-  /** 社交预览（爬虫访问时返回 OG 标签）。 */
-  og?: OgMeta;
 }
 
 const PREFIX = "link:";
@@ -82,16 +80,6 @@ function cleanCountries(c: Record<string, string> | null | undefined): Record<st
   return Object.keys(out).length ? out : undefined;
 }
 
-function cleanOg(o: OgMeta | null | undefined): OgMeta | undefined {
-  if (!o) return undefined;
-  const out: OgMeta = {};
-  const t = text(o.title, 200), d = text(o.description, 500);
-  if (t) out.title = t;
-  if (d) out.description = d;
-  if (typeof o.image === "string" && o.image.trim()) out.image = cleanUrl(o.image, "预览图片");
-  return Object.keys(out).length ? out : undefined;
-}
-
 function cleanExpiry(v: string | null | undefined): string | undefined {
   if (!v) return undefined;
   const t = Date.parse(v);
@@ -117,7 +105,7 @@ async function apply(base: LinkRecord | null, input: LinkInput): Promise<LinkRec
   if (input.unsafe !== undefined) rec.unsafe = input.unsafe ? true : undefined;
   if (input.devices !== undefined) rec.devices = cleanDevices(input.devices);
   if (input.countries !== undefined) rec.countries = cleanCountries(input.countries);
-  if (input.og !== undefined) rec.og = cleanOg(input.og);
+  delete (rec as { og?: unknown }).og; // 社交预览功能已移除，顺手清掉旧数据
   // 去掉 undefined，KV 里保持干净
   return JSON.parse(JSON.stringify(rec));
 }
@@ -125,7 +113,7 @@ async function apply(base: LinkRecord | null, input: LinkInput): Promise<LinkRec
 export const isExpired = (l: LinkRecord, at = Date.now()) => Boolean(l.expiresAt && Date.parse(l.expiresAt) <= at);
 
 export function toView(code: string, l: LinkRecord): LinkView {
-  const { password, ...rest } = l;
+  const { password, og: _og, ...rest } = l as LinkRecord & { og?: unknown };
   return { code, ...rest, hasPassword: Boolean(password) };
 }
 

@@ -1,4 +1,4 @@
-// 新建 / 编辑短链：一个 Dialog，三个分区用 Tabs 切换（社交预览在列表的「…」菜单里单独编辑）。
+// 新建 / 编辑短链：一个 Dialog，三个分区用 Tabs 切换。
 import { useEffect, useState } from "react";
 import { Banner, Button, Dialog, Grid, Input, Select, SensitiveInput, Switch, Tabs, Text } from "@cloudflare/kumo";
 import { PlusIcon, TrashIcon, WarningCircleIcon, XIcon } from "@phosphor-icons/react";

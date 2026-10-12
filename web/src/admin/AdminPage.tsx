@@ -22,7 +22,6 @@ import {
   CopyIcon,
   DotsThreeIcon,
   GlobeHemisphereEastIcon,
-  ImageIcon,
   InfoIcon,
   LinkSimpleIcon,
   LockKeyIcon,
@@ -39,7 +38,6 @@ import { api } from "../api.ts";
 import { countdown, fmtTime } from "./format.ts";
 import { useNow } from "../useNow.ts";
 import { LinkDialog } from "./LinkDialog.tsx";
-import { PreviewDialog } from "./PreviewDialog.tsx";
 // 图表库（ECharts）只在需要看统计时加载
 const StatsDialog = lazy(() => import("./StatsDialog.tsx").then((m) => ({ default: m.StatsDialog })));
 
@@ -62,13 +60,12 @@ function ExpiryText({ iso }: { iso: string }) {
 
 function LinkBadges({ l }: { l: LinkView }) {
   const routes = Object.keys(l.devices ?? {}).length + Object.keys(l.countries ?? {}).length;
-  if (!l.hasPassword && !l.unsafe && !routes && !l.og) return null;
+  if (!l.hasPassword && !l.unsafe && !routes) return null;
   return (
     <div className="flex flex-wrap gap-1">
       {l.hasPassword && <Badge variant="neutral" icon={<LockKeyIcon />}>密码</Badge>}
       {l.unsafe && <Badge variant="orange" icon={<ShieldWarningIcon />}>安全提示</Badge>}
       {routes > 0 && <Badge variant="blue" icon={<GlobeHemisphereEastIcon />}>分流 {routes}</Badge>}
-      {l.og && <Badge variant="purple" icon={<ImageIcon />}>预览</Badge>}
     </div>
   );
 }
@@ -84,8 +81,6 @@ export function AdminPage({ user, origin, stats }: Props) {
   const [editing, setEditing] = useState<LinkView | null>(null);
   const [statsCode, setStatsCode] = useState<string | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
-  const [previewing, setPreviewing] = useState<LinkView | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [deleting, setDeleting] = useState<LinkView | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -124,10 +119,6 @@ export function AdminPage({ user, origin, stats }: Props) {
   const openEdit = (l: LinkView) => {
     setEditing(l);
     setEditOpen(true);
-  };
-  const openPreview = (l: LinkView) => {
-    setPreviewing(l);
-    setPreviewOpen(true);
   };
   const openStats = (code: string) => {
     setStatsCode(code);
@@ -280,7 +271,6 @@ export function AdminPage({ user, origin, stats }: Props) {
                           <DropdownMenu.LinkItem icon={ArrowSquareOutIcon} href={shortUrl(l.code)} target="_blank">打开</DropdownMenu.LinkItem>
                           {stats.queryable && <DropdownMenu.Item icon={ChartBarIcon} onClick={() => openStats(l.code)}>访问统计</DropdownMenu.Item>}
                           <DropdownMenu.Item icon={PencilSimpleIcon} onClick={() => openEdit(l)}>编辑</DropdownMenu.Item>
-                          <DropdownMenu.Item icon={ImageIcon} onClick={() => openPreview(l)}>{l.og ? "社交预览 · 已设置" : "社交预览"}</DropdownMenu.Item>
                           <DropdownMenu.Separator />
                           <DropdownMenu.Item icon={TrashIcon} variant="danger" onClick={() => askDelete(l)}>删除</DropdownMenu.Item>
                         </DropdownMenu.Content>
@@ -313,17 +303,6 @@ export function AdminPage({ user, origin, stats }: Props) {
           } else {
             toast.add({ title: `已保存 /${link.code}`, variant: "success" });
           }
-          void load();
-        }}
-      />
-
-      <PreviewDialog
-        open={previewOpen}
-        link={previewing}
-        origin={origin}
-        onOpenChange={setPreviewOpen}
-        onSaved={(link) => {
-          toast.add({ title: `已保存 /${link.code} 的社交预览`, variant: "success" });
           void load();
         }}
       />

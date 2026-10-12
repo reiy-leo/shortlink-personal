@@ -4,7 +4,6 @@ export interface DeviceRules {
   iphone?: string; ipad?: string; ios?: string; android?: string; harmonyos?: string; mobile?: string;
   macos?: string; windows?: string; desktop?: string;
 }
-export interface OgMeta { title?: string; description?: string; image?: string }
 
 /** 给后台看的短链视图（不含密码哈希）。 */
 export interface LinkView {
@@ -18,7 +17,6 @@ export interface LinkView {
   unsafe?: boolean;
   devices?: DeviceRules;
   countries?: Record<string, string>;
-  og?: OgMeta;
 }
 
 /** 新建 / 编辑的输入。编辑时缺省字段 = 保持不变；空字符串 / null = 清除。 */
@@ -32,7 +30,6 @@ export interface LinkInput {
   unsafe?: boolean;
   devices?: DeviceRules | null;
   countries?: Record<string, string> | null;
-  og?: OgMeta | null;
 }
 
 export type StatsRow = { name: string; clicks: number };

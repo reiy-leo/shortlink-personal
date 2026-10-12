@@ -58,14 +58,10 @@ assert.equal((await visit("/hi", IPHONE, { cf: { country: "CN" } })).headers.get
 assert.equal((await visit("/hi", MAC, { cf: { country: "CN" } })).headers.get("Location"), "https://example.cn/");
 assert.equal((await visit("/hi", MAC, { cf: { country: "SG" } })).headers.get("Location"), "https://example.com/a?b=1");
 
-// 社交预览：爬虫拿到 OG 标签，且不计入统计
-await api("/api/links/hi", "PUT", { og: { title: "你好 <世界>", image: "https://img.example.com/a.png" } });
+// 爬虫照常跳转，但不计入统计
 const before = points.length;
 r = await visit("/hi", "TelegramBot (like TwitterBot)");
-const html = await r.text();
-assert.equal(r.status, 200);
-assert.match(html, /og:title" content="你好 &lt;世界&gt;"/);
-assert.match(html, /og:image" content="https:\/\/img.example.com\/a.png"/);
+assert.equal(r.status, 302);
 await Promise.all(waits);
 assert.equal(points.length, before);
 

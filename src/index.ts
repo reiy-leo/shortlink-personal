@@ -1,6 +1,6 @@
 // shortlink-personal：Rei 的个人短链服务（s.rei8t.dev）
 //
-//   GET  /:code              跳转（过期 → 410；密码 → 输入页；警告页；设备/国家分流；爬虫 → OG 预览）
+//   GET  /:code              跳转（过期 → 410；密码 → 输入页；警告页；设备/国家分流）
 //   POST /:code              提交访问密码
 //   GET  /admin              后台（仅 ADMIN_EMAILS 里的 Google 账号）
 //   GET  /auth/login | /auth/callback, POST /auth/logout   Google OAuth
@@ -13,7 +13,7 @@ import { clickTotals, linkStats, recordClick } from "./analytics.ts";
 import { callback, getAdmin, login, logout } from "./auth.ts";
 import { statsQueryable, statsRecording, type Env } from "./env.ts";
 import { CODE_RE, createLink, deleteLink, getLink, InputError, isExpired, listLinks, updateLink, type LinkInput } from "./links.ts";
-import { previewPage, renderPage } from "./html.ts";
+import { renderPage } from "./html.ts";
 import type { LoginError } from "./shared/types.ts";
 import { checkPassword } from "./password.ts";
 import { pickTarget, visitorOf } from "./visitor.ts";
@@ -74,10 +74,6 @@ async function handleRedirect(req: Request, env: Env, ctx: ExecutionContext, cod
   if (isExpired(link)) return renderPage(env, req, { kind: "expired" }, 410);
 
   const v = visitorOf(req);
-  const shortUrl = new URL("/" + code, req.url).toString();
-
-  // 社交平台爬虫：有自定义预览就返回 OG 页；有密码时不暴露目标地址
-  if (v.bot && link.og && req.method !== "POST") return previewPage(link.og, shortUrl, link.password ? null : pickTarget(link, v, req.headers.get("User-Agent") ?? ""));
 
   if (link.password) {
     if (req.method !== "POST") return renderPage(env, req, { kind: "password", code, wrong: false });

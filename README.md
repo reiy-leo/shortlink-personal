@@ -11,13 +11,11 @@ Rei 的个人短链服务，跑在单个 Cloudflare Worker 上，域名 **s.rei8
 - **访问统计**：Workers Analytics Engine 记录每次跳转（爬虫不计），后台看近 7 / 30 / 90 天的每日趋势、国家/地区、设备、系统、浏览器、来源
 - **链接控制**：过期时间（过期后返回 410）、访问密码（PBKDF2 哈希存储）、「不安全链接」警告页
 - **智能跳转**：按设备或国家跳不同地址，优先级 设备 → 国家 → 默认。设备用 [bowser](https://github.com/bowser-js/bowser)（MIT）识别，可选 iPhone / iPad / iOS（两者通用）/ Android / 鸿蒙 / 所有手机平板 / macOS / Windows / 所有电脑；先匹配具体设备再回退通用规则（iPhone → iOS → 所有手机平板；macOS → 所有电脑），老鸿蒙（UA 带 Android）没配鸿蒙规则时走 Android。注意 iPadOS 13+ Safari 默认伪装成 Mac，会被识别为 macOS
-- **社交预览**：自定义 OG 标题、描述、图片；微信、Telegram、X、Slack 等爬虫抓取时返回预览页。设了密码的链接，预览页不暴露目标地址。在列表每行的「…」菜单里单独编辑（不在新建/编辑窗口里）
 
 ## 技术栈
 
 - **Worker**：TypeScript + Wrangler，无框架。负责跳转、API、登录，并把「该显示哪个页面 + 数据」注入 HTML
 - **前端**：React 19 + [Kumo](https://github.com/cloudflare/kumo)（Cloudflare 设计系统）+ Tailwind v4，Vite 构建到 `public/`，由 Workers Static Assets 提供。后台、登录、密码、安全提示、过期、404 全部是同一套 Kumo 组件
-- 社交爬虫拿到的 OG 预览页是唯一的服务端纯 HTML
 
 ```
 src/                    Worker
@@ -45,7 +43,7 @@ test/run-tests.ts       内存 KV + 假 Analytics Engine + 假 Assets 跑全流�
 
 ## 跳转流程
 
-`GET /:code`：不存在 → 404 ｜ 已过期 → 410 ｜ 社交爬虫且设了预览 → OG 预览页 ｜ 有密码 → 密码页（`POST /:code` 提交）｜ 按设备/国家选目标 ｜ 记一次访问 ｜ 标记不安全 → 警告页，否则 302。
+`GET /:code`：不存在 → 404 ｜ 已过期 → 410 ｜ 有密码 → 密码页（`POST /:code` 提交）｜ 按设备/国家选目标 ｜ 记一次访问 ｜ 标记不安全 → 警告页，否则 302。
 
 ## API（需登录）
 
@@ -68,8 +66,7 @@ test/run-tests.ts       内存 KV + 假 Analytics Engine + 假 Assets 跑全流�
   "password": "可选，null = 移除",
   "unsafe": false,
   "devices": { "ios": "https://apps.apple.com/…", "android": "https://play.google.com/…", "mobile": "", "desktop": "" },
-  "countries": { "CN": "https://example.cn" },
-  "og": { "title": "标题", "description": "描述", "image": "https://…/cover.png" }
+  "countries": { "CN": "https://example.cn" }
 }
 ```
 
@@ -142,7 +139,6 @@ Google 只证明「你是这个邮箱」，能否进后台由 `ADMIN_EMAILS` 白
 - [x] 访问统计（Analytics Engine）
 - [x] 链接控制：过期、密码、警告页
 - [x] 智能跳转：设备 / 国家
-- [x] 社交预览：自定义 OG
 - [x] 全站界面改用 Kumo 组件，遵循 kumo-design
 - [ ] 二维码、导入导出、API Token 调用（待定）
 
