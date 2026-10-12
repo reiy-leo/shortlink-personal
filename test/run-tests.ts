@@ -6,7 +6,9 @@ import type { Env } from "../src/env.ts";
 class MemKV {
   m = new Map<string, { v: string; meta?: unknown }>();
   async get(k: string) { return this.m.get(k)?.v ?? null; }
-  async put(k: string, v: string, o?: { metadata?: unknown }) { this.m.set(k, { v, meta: o?.metadata }); }
+  async getWithMetadata(k: string) { const e = this.m.get(k); return { value: e?.v ?? null, metadata: e?.meta ?? null }; }
+  exp = new Map<string, number | undefined>();
+  async put(k: string, v: string, o?: { metadata?: unknown; expiration?: number }) { this.m.set(k, { v, meta: o?.metadata }); this.exp.set(k, o?.expiration); }
   async delete(k: string) { this.m.delete(k); }
   async list({ prefix = "" }: { prefix?: string }) {
     return { keys: [...this.m].filter(([k]) => k.startsWith(prefix)).map(([name, e]) => ({ name, metadata: e.meta })), list_complete: true, cursor: "" };
@@ -175,10 +177,22 @@ console.log("✓ 设备识别");
   assert.equal(r.status, 200);
   const { image } = (await r.json()) as { image: string };
   assert.match(image, /^http:\/\/localhost:8787\/og\/ogt\.png\?v=\d+$/);
+  const kv = env.LINKS as unknown as MemKV;
+  assert.equal(kv.exp.get("ogimg:ogt"), undefined);
+  // 设了预览图后改过期时间 → 图片的 KV 过期时间跟着变
+  await api("/api/links/ogt", "PUT", { og: { image } });
+  await api("/api/links/ogt", "PUT", { expiresAt: "2099-01-01T00:00:00+08:00" });
+  assert.equal(kv.exp.get("ogimg:ogt"), Date.parse("2099-01-01T00:00:00+08:00") / 1000);
+  await api("/api/links/ogt", "PUT", { expiresAt: null });
+  assert.equal(kv.exp.get("ogimg:ogt"), undefined);
   const png = await visit("/og/ogt.png");
   assert.equal(png.status, 200);
   assert.equal(png.headers.get("Content-Type"), "image/png");
   assert.equal((await api("/api/links/nope/og-image", "POST")).status, 404);
+  // 预览图换成别的地址 → 旧图删除
+  await api("/api/links/ogt", "PUT", { og: { image: "https://example.com/x.png" } });
+  assert.equal((await visit("/og/ogt.png")).status, 404);
+  await api("/api/links/ogt/og-image", "POST");
   assert.equal((await api("/api/links/ogt", "DELETE")).status, 200);
   assert.equal((await visit("/og/ogt.png")).status, 404);
 }

@@ -19,7 +19,7 @@ import { previewPage, renderPage } from "./html.ts";
 import type { LoginError } from "./shared/types.ts";
 import { checkPassword } from "./password.ts";
 import { pickTarget, visitorOf } from "./visitor.ts";
-import { deleteOgImage, randomOgImage, serveOgImage } from "./ogimage.ts";
+import { deleteOgImage, randomOgImage, serveOgImage, syncOgImage } from "./ogimage.ts";
 
 const LOGIN_ERRORS = new Set(["unconfigured", "denied", "state", "token", "id_token", "unverified", "forbidden"]);
 
@@ -59,13 +59,18 @@ async function handleApi(req: Request, env: Env, path: string): Promise<Response
     const og = path.match(/^\/api\/links\/([^/]+)\/og-image$/);
     if (og && req.method === "POST") {
       const code = decodeURIComponent(og[1]!);
-      if (!(await getLink(env, code))) return json({ error: "短码不存在" }, 404);
-      return json(await randomOgImage(env, new URL(req.url).origin, code));
+      const link = await getLink(env, code);
+      if (!link) return json({ error: "短码不存在" }, 404);
+      return json(await randomOgImage(env, new URL(req.url).origin, code, link.expiresAt));
     }
     const one = path.match(/^\/api\/links\/([^/]+)$/);
     if (one) {
       const code = decodeURIComponent(one[1]!);
-      if (req.method === "PUT") return json({ link: await updateLink(env, code, await readInput(req)) });
+      if (req.method === "PUT") {
+        const link = await updateLink(env, code, await readInput(req));
+        await syncOgImage(env, new URL(req.url).origin, code, link);
+        return json({ link });
+      }
       if (req.method === "DELETE") {
         if (!(await deleteLink(env, code))) return json({ error: "短码不存在" }, 404);
         await deleteOgImage(env, code);
