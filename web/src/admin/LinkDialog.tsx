@@ -118,7 +118,7 @@ export function LinkDialog(props: {
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog size="xl" className="px-6 py-5">
+      <Dialog size="xl" className="max-h-[90vh] overflow-y-auto px-6 py-5">
         <form onSubmit={save} className="grid gap-5">
           <div className="flex items-start justify-between gap-4">
             <div className="grid gap-1">

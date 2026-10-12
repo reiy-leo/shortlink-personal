@@ -4,12 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm build && wrangler dev",
+    "dev": "pnpm build && wrangler dev --local-upstream localhost:8787",
     "dev:web": "vite",
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p web/tsconfig.json --noEmit",
-    "test": "node --experimental-strip-types test/run-tests.ts",
-    "deploy": "pnpm build && wrangler deploy"
+    "test": "node scripts/kumo-lint.mjs && node --experimental-strip-types test/run-tests.ts",
+    "deploy": "pnpm build && wrangler deploy",
+    "lint": "node scripts/kumo-lint.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251001.0",

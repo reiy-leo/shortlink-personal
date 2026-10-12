@@ -183,8 +183,8 @@ export function AdminPage({ user, origin, stats }: Props) {
             <Text variant="heading" size="lg" as="h2">链接</Text>
             <Text variant="secondary">{links ? `共 ${links.length} 条` : "加载中…"}</Text>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-full sm:w-64">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
               <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-kumo-subtle">
                 <MagnifyingGlassIcon size={14} />
               </span>
@@ -222,7 +222,7 @@ export function AdminPage({ user, origin, stats }: Props) {
                   <Table.Head>短链</Table.Head>
                   <Table.Head>目标</Table.Head>
                   {stats.queryable && <Table.Head className="text-right">近 90 天</Table.Head>}
-                  <Table.Head>创建时间</Table.Head>
+                  <Table.Head className="hidden md:table-cell">创建时间</Table.Head>
                   <Table.Head className="w-12"><span className="sr-only">操作</span></Table.Head>
                 </Table.Row>
               </Table.Header>
@@ -253,7 +253,7 @@ export function AdminPage({ user, origin, stats }: Props) {
                         </button>
                       </Table.Cell>
                     )}
-                    <Table.Cell className="whitespace-nowrap text-kumo-subtle">{fmtTime(l.createdAt)}</Table.Cell>
+                    <Table.Cell className="hidden whitespace-nowrap text-kumo-subtle md:table-cell">{fmtTime(l.createdAt)}</Table.Cell>
                     <Table.Cell>
                       <DropdownMenu>
                         <DropdownMenu.Trigger render={<Button variant="ghost" size="sm" shape="square" icon={DotsThreeIcon} aria-label={`/${l.code} 的操作`} />} />
