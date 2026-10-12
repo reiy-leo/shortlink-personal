@@ -2,9 +2,6 @@
 import assert from "node:assert/strict";
 import worker from "../src/index.ts";
 import type { Env } from "../src/env.ts";
-import { adminPage } from "../src/pages.ts";
-import { writeFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
 
 class MemKV {
   m = new Map<string, { v: string; meta?: unknown }>();
@@ -18,8 +15,14 @@ class MemKV {
 const points: any[] = [];
 const waits: Promise<unknown>[] = [];
 const ctx = { waitUntil: (p: Promise<unknown>) => waits.push(p), passThroughOnException() {} } as unknown as ExecutionContext;
+// 假的 Static Assets：只提供前端壳 index.html
+const SHELL = "<!doctype html><html><head><!--PAGE_DATA--></head><body><div id=root></div></body></html>";
+const ASSETS = { fetch: async (u: string | URL | Request) => new URL(u instanceof Request ? u.url : u).pathname === "/index.html" ? new Response(SHELL) : new Response("nf", { status: 404 }) };
+/** 从页面里取出 Worker 注入的数据 */
+const pageOf = async (r: Response) => JSON.parse((await r.text()).match(/<script id="page-data" type="application\/json">(.*?)<\/script>/)![1]!);
+
 const env = {
-  LINKS: new MemKV(), ANALYTICS: { writeDataPoint: (p: unknown) => points.push(p) },
+  LINKS: new MemKV(), ASSETS, ANALYTICS: { writeDataPoint: (p: unknown) => points.push(p) },
   AUTH_DISABLED: "true", ADMIN_EMAILS: "reiy.leoz@gmail.com",
 } as unknown as Env;
 const L = "http://localhost:8787";
@@ -72,10 +75,14 @@ const list = ((await (await api("/api/links")).json()) as any).links;
 const hi = list.find((l: any) => l.code === "hi");
 assert.equal(hi.hasPassword, true);
 assert.equal(hi.password, undefined);
-assert.equal((await visit("/hi")).status, 200); // 密码页
+r = await visit("/hi");
+assert.equal(r.status, 200);
+assert.deepEqual(await pageOf(r), { kind: "password", code: "hi", wrong: false });
 assert.doesNotMatch(await (await visit("/hi", "Slackbot-LinkExpanding 1.0")).text(), /example\.com\/a\?b=1|refresh/); // 预览不泄露目标
 const form = (pw: string) => visit("/hi", MAC, { method: "POST", body: new URLSearchParams({ password: pw }) });
-assert.equal((await form("nope")).status, 401);
+r = await form("nope");
+assert.equal(r.status, 401);
+assert.equal((await pageOf(r)).wrong, true);
 r = await form("s3cret");
 assert.equal(r.status, 302);
 assert.equal(r.headers.get("Location"), "https://example.com/a?b=1");
@@ -86,25 +93,45 @@ assert.equal((await visit("/hi")).status, 302);
 await api("/api/links/hi", "PUT", { unsafe: true });
 r = await visit("/hi");
 assert.equal(r.status, 200);
-assert.match(await r.text(), /安全提示/);
+assert.deepEqual(await pageOf(r), { kind: "warning", target: "https://example.com/a?b=1" });
 await api("/api/links/hi", "PUT", { unsafe: false, expiresAt: new Date(Date.now() - 1000).toISOString() });
-assert.equal((await visit("/hi")).status, 410);
+r = await visit("/hi");
+assert.equal(r.status, 410);
+assert.equal((await pageOf(r)).kind, "expired");
 await api("/api/links/hi", "PUT", { expiresAt: null });
 assert.equal((await visit("/hi")).status, 302);
 
 // 删除 + CSRF
 assert.equal((await worker.fetch(new Request(L + "/api/links/hi", { method: "DELETE", headers: { Origin: "https://evil.com" } }) as any, env, ctx)).status, 403);
 assert.equal((await api("/api/links/hi", "DELETE")).status, 200);
-assert.equal((await visit("/hi")).status, 404);
+r = await visit("/hi");
+assert.equal(r.status, 404);
+assert.equal((await pageOf(r)).kind, "notfound");
 
 // 线上域名不吃 AUTH_DISABLED
 assert.equal((await worker.fetch(new Request("https://s.rei8t.dev/api/links") as any, env, ctx)).status, 401);
-assert.equal((await worker.fetch(new Request("https://s.rei8t.dev/admin") as any, env, ctx)).status, 200);
+r = await worker.fetch(new Request("https://s.rei8t.dev/admin?login_error=forbidden") as any, env, ctx);
+assert.deepEqual(await pageOf(r), { kind: "login", error: "forbidden" });
+r = await worker.fetch(new Request("https://s.rei8t.dev/admin?login_error=<script>") as any, env, ctx);
+assert.deepEqual(await pageOf(r), { kind: "login", error: null });
 
-// 后台内联脚本语法检查
-const page = await adminPage({ sub: "x", email: "x", exp: 0 }, "https://s.rei8t.dev", { recording: true, queryable: true }).text();
-const script = page.match(/<script>([\s\S]*)<\/script>/)![1]!;
-writeFileSync("/tmp/sl-admin.js", script);
-execFileSync(process.execPath, ["--check", "/tmp/sl-admin.js"]);
+// 本地 AUTH_DISABLED 时后台拿到用户和统计配置
+const admin = await pageOf(await visit("/admin"));
+assert.equal(admin.kind, "admin");
+assert.equal(admin.stats.recording, true);
+assert.equal(admin.stats.queryable, false);
+
+// 注入数据里的 </script> 被转义，不会截断
+await api("/api/links", "POST", { url: "https://example.com/x?q=</script><script>alert(1)</script>", code: "xss", unsafe: true });
+const raw = await (await visit("/xss")).text();
+assert.doesNotMatch(raw, /<\/script><script>alert/);
+assert.equal((await pageOf(new Response(raw))).target, "https://example.com/x?q=%3C/script%3E%3Cscript%3Ealert(1)%3C/script%3E");
+
+// 前端没构建时有兜底页面
+const bare = { ...env, ASSETS: undefined } as unknown as Env;
+const fb = await worker.fetch(new Request(L + "/nope-404", { headers: { "User-Agent": MAC } }) as any, bare, ctx);
+assert.equal(fb.status, 404);
+assert.match(await fb.text(), /链接不存在/);
+
 
 console.log("✓ all tests passed");
