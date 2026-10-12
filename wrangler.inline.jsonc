@@ -17,7 +17,7 @@
   "kv_namespaces": [{ "binding": "LINKS", "id": "4e73ff37c7184ad5ad35ba14cb36866e" }],
   // 访问统计：Workers Analytics Engine（数据集首次写入时自动创建）
   // Analytics Engine 需先在控制台启用（code 10089）；启用后取消注释
-  // "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "shortlink_personal_clicks" }],
+  "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "shortlink_personal_clicks" }],
   "vars": {
     // 只有这些 Google 账号能进后台（逗号分隔）
     "ADMIN_EMAILS": "reiy.leoz@gmail.com",

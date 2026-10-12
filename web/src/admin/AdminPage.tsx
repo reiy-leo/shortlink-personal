@@ -48,21 +48,22 @@ interface Props {
   stats: { recording: boolean; queryable: boolean };
 }
 
-function LinkBadges({ l }: { l: LinkView }) {
+/** 过期时间：纯文字，"2026/10/15 01:24 +0800 过期 · 还剩 2天 3小时 19分钟" */
+function ExpiryText({ iso }: { iso: string }) {
   const now = useNow();
-  const left = l.expiresAt ? countdown(l.expiresAt, now) : null;
+  const left = countdown(iso, now);
+  return left ? (
+    <Text variant="secondary" size="sm">{fmtTime(iso)} 过期 · 还剩 {left}</Text>
+  ) : (
+    <Text variant="error" size="sm">已于 {fmtTime(iso)} 过期</Text>
+  );
+}
+
+function LinkBadges({ l }: { l: LinkView }) {
   const routes = Object.keys(l.devices ?? {}).length + Object.keys(l.countries ?? {}).length;
+  if (!l.hasPassword && !l.unsafe && !routes && !l.og) return null;
   return (
     <div className="flex flex-wrap gap-1">
-      {l.expiresAt &&
-        (!left ? (
-          <Badge variant="red">已过期</Badge>
-        ) : (
-          <>
-            <Badge variant="neutral">{fmtTime(l.expiresAt)} 过期</Badge>
-            {left && <Badge variant="blue">还剩 {left}</Badge>}
-          </>
-        ))}
       {l.hasPassword && <Badge variant="neutral" icon={<LockKeyIcon />}>密码</Badge>}
       {l.unsafe && <Badge variant="orange" icon={<ShieldWarningIcon />}>安全提示</Badge>}
       {routes > 0 && <Badge variant="blue" icon={<GlobeHemisphereEastIcon />}>分流 {routes}</Badge>}
@@ -252,6 +253,7 @@ export function AdminPage({ user, origin, stats }: Props) {
                     <Table.Cell className="max-w-md">
                       <div className="grid gap-1.5">
                         <Text truncate title={l.url}>{l.url}</Text>
+                        {l.expiresAt && <ExpiryText iso={l.expiresAt} />}
                         <LinkBadges l={l} />
                       </div>
                     </Table.Cell>
