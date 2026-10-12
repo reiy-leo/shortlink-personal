@@ -20,7 +20,7 @@ Rei 的个人短链服务，跑在单个 Cloudflare Worker 上，域名 **s.rei8
 ```
 src/                    Worker
   index.ts              路由：/:code 跳转、/admin、/auth/*、/api/*
-  html.ts               读 public/index.html 注入页面数据；OG 预览页
+  html.ts               读 public/index.html 注入页面数据
   links.ts              KV 读写、输入校验、短码生成
   visitor.ts            设备 / 系统 / 浏览器 / 爬虫识别，智能跳转规则
   analytics.ts          Analytics Engine 写入与 SQL 查询
