@@ -4,10 +4,12 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "pnpm build && wrangler dev",
+    "dev:web": "vite",
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "test": "node --experimental-strip-types test/run-tests.ts",
-    "deploy": "wrangler deploy"
+    "deploy": "pnpm build && wrangler deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251001.0",
