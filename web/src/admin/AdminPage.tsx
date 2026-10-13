@@ -176,7 +176,10 @@ export function AdminPage({ user, origin, stats }: Props) {
             <span className="flex size-7 items-center justify-center rounded-md bg-kumo-brand text-white">
               <LinkSimpleIcon size={16} weight="bold" />
             </span>
-            <Text variant="heading" as="h1">短链</Text>
+            <div className="flex flex-col leading-tight">
+              <Text variant="heading" as="h1">短链生成器</Text>
+              <span className="text-xs text-kumo-subtle">Link Shortener</span>
+            </div>
             <Badge variant="outline">{origin.replace(/^https?:\/\//, "")}</Badge>
           </div>
           <DropdownMenu>

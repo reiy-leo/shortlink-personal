@@ -29,7 +29,7 @@ export async function renderPage(env: Env, req: Request, data: PageData, status 
   const headers = { "Content-Type": "text/html; charset=utf-8", ...SECURITY_HEADERS };
   const shell = env.ASSETS ? await env.ASSETS.fetch(new URL("/index.html", req.url)).catch(() => null) : null;
   if (!shell || !shell.ok) {
-    return new Response(`<!doctype html><meta charset="utf-8"><title>s.rei8t.dev</title><p>${esc(FALLBACK_TEXT[data.kind])}</p>`, { status, headers });
+    return new Response(`<!doctype html><meta charset="utf-8"><title>短链生成器</title><p>${esc(FALLBACK_TEXT[data.kind])}</p>`, { status, headers });
   }
   // JSON 放进 <script>：转义 < 防止 </script> 截断，同时挡住 U+2028/2029
   const json = JSON.stringify(data).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");

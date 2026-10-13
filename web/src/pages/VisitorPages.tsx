@@ -28,7 +28,7 @@ const icon = (node: ReactNode) => <span className="text-kumo-inactive">{node}</s
 export function HomePage() {
   return (
     <StatusLayout>
-      <Empty icon={icon(<LinkSimpleIcon size={48} />)} title="s.rei8t.dev" description="Rei 的个人短链服务。" />
+      <Empty icon={icon(<LinkSimpleIcon size={48} />)} title="短链生成器" description="Rei 的个人短链服务。" />
     </StatusLayout>
   );
 }
@@ -125,7 +125,7 @@ export function LoginPage({ error }: { error: LoginError | null }) {
         {error && <Banner variant="error" icon={<WarningCircleIcon weight="fill" />} title="登录失败" description={LOGIN_ERRORS[error]} />}
         <Empty
           icon={icon(<LinkSimpleIcon size={48} />)}
-          title="短链后台"
+          title="短链生成器"
           description="仅限管理员，使用 Google 账号登录。"
           contents={
             <LinkButton href="/auth/login?returnTo=/admin" variant="primary" icon={GoogleLogoIcon}>

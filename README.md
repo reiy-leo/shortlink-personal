@@ -1,6 +1,6 @@
-# shortlink-personal
+# 短链生成器
 
-Rei 的个人短链服务，跑在单个 Cloudflare Worker 上，域名 **s.rei8t.dev**。
+英文名 Link Shortener。Rei 的个人短链服务，跑在单个 Cloudflare Worker 上，域名 **s.rei8t.dev**。
 
 - `https://s.rei8t.dev/<短码>` → 302 跳转到长链接（Workers KV 存 `短码 -> 长链接`）
 - `https://s.rei8t.dev/admin` → 中文后台，**只有 Rei 能进**（Google OAuth 登录 + 邮箱白名单）
