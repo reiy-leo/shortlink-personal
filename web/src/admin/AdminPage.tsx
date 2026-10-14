@@ -38,6 +38,7 @@ import { api } from "../api.ts";
 import { countdown, fmtTime } from "./format.ts";
 import { useNow } from "../useNow.ts";
 import { LinkDialog } from "./LinkDialog.tsx";
+import appIcon from "../assets/app-icon.png";
 // 图表库（ECharts）只在需要看统计时加载
 const StatsDialog = lazy(() => import("./StatsDialog.tsx").then((m) => ({ default: m.StatsDialog })));
 
@@ -173,9 +174,7 @@ export function AdminPage({ user, origin, stats }: Props) {
       <header className="sticky top-0 z-10 border-b border-kumo-line bg-kumo-base">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-5">
           <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-md bg-kumo-brand text-white">
-              <LinkSimpleIcon size={16} weight="bold" />
-            </span>
+            <img src={appIcon} alt="" className="size-8" />
             <div className="flex flex-col leading-tight">
               <Text variant="heading" as="h1">短链生成器</Text>
               <span className="text-xs text-kumo-subtle">Link Shortener</span>

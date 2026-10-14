@@ -5,12 +5,12 @@ import {
   ClockCountdownIcon,
   GoogleLogoIcon,
   LinkBreakIcon,
-  LinkSimpleIcon,
   LockKeyIcon,
   ShieldWarningIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react";
 import type { LoginError } from "../../../src/shared/types.ts";
+import appIcon from "../assets/app-icon.png";
 
 function StatusLayout({ children }: { children: ReactNode }) {
   return (
@@ -28,7 +28,7 @@ const icon = (node: ReactNode) => <span className="text-kumo-inactive">{node}</s
 export function HomePage() {
   return (
     <StatusLayout>
-      <Empty icon={icon(<LinkSimpleIcon size={48} />)} title="短链生成器" description="Rei 的个人短链服务。" />
+      <Empty icon={<img src={appIcon} alt="" className="size-16" />} title="短链生成器" description="Rei 的个人短链服务。" />
     </StatusLayout>
   );
 }
@@ -124,7 +124,7 @@ export function LoginPage({ error }: { error: LoginError | null }) {
       <div className="grid gap-6">
         {error && <Banner variant="error" icon={<WarningCircleIcon weight="fill" />} title="登录失败" description={LOGIN_ERRORS[error]} />}
         <Empty
-          icon={icon(<LinkSimpleIcon size={48} />)}
+          icon={<img src={appIcon} alt="" className="size-16" />}
           title="短链生成器"
           description="仅限管理员，使用 Google 账号登录。"
           contents={
